@@ -377,7 +377,10 @@
       <div class="chat-friend-name" id="chat-name"></div>
       <div class="chat-status"><span class="status-dot"></span> Connected</div>
     </div>
-    <button class="back-btn" onclick="goTo('select-screen','chat-screen')">← Back</button>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <button class="back-btn" onclick="downloadChat()" title="Download conversation">↓ .txt</button>
+      <button class="back-btn" onclick="goTo('select-screen','chat-screen')">← Back</button>
+    </div>
   </div>
   <div id="portrait-area">
     <div class="portrait-wrap" id="portrait-wrap">
@@ -435,11 +438,67 @@ let selectedFriend = null;
 let convos = {};
 let busy = false;
 
+function saveConvos() {
+  try {
+    localStorage.setItem('cashnet_convos', JSON.stringify(convos));
+  } catch(e) {}
+}
+
+function loadConvos() {
+  try {
+    const saved = localStorage.getItem('cashnet_convos');
+    if (saved) convos = JSON.parse(saved);
+  } catch(e) { convos = {}; }
+}
+
+function downloadChat() {
+  if (!selectedFriend || !convos[selectedFriend] || !convos[selectedFriend].length) return;
+  const f = FRIENDS[selectedFriend];
+  const lines = ['CASHNET — Conversation with ' + f.name, '=' .repeat(40), ''];
+  convos[selectedFriend].forEach(m => {
+    const speaker = m.role === 'user' ? 'You' : f.name;
+    lines.push(speaker + ':');
+    lines.push(m.content);
+    lines.push('');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cashnet-' + f.name.toLowerCase() + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+loadConvos();
+// Update badges after DOM is ready
+document.addEventListener('DOMContentLoaded', updateCardBadges);
+setTimeout(updateCardBadges, 100);
+
 function goTo(show, hide) {
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   setTalking(false);
   document.getElementById(hide).classList.add('hidden');
   document.getElementById(show).classList.remove('hidden');
+  if (show === 'select-screen') updateCardBadges();
+}
+
+function updateCardBadges() {
+  ['brent','brian','glen','danny','chris'].forEach(id => {
+    const card = document.getElementById('card-' + id);
+    if (!card) return;
+    const count = convos[id] ? convos[id].length : 0;
+    let badge = card.querySelector('.msg-count');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'msg-count';
+        badge.style.cssText = 'font-size:10px;color:var(--cyan);letter-spacing:1px;margin-top:4px;font-family:Orbitron,monospace;';
+        card.querySelector('.friend-card-text').appendChild(badge);
+      }
+      badge.textContent = count + ' message' + (count === 1 ? '' : 's');
+    }
+  });
 }
 
 function selectFriend(id) {
@@ -512,6 +571,7 @@ async function sendMessage() {
   busy = true; document.getElementById('send-btn').disabled = true;
   if (!convos[selectedFriend]) convos[selectedFriend] = [];
   convos[selectedFriend].push({ role: 'user', content: text });
+  saveConvos();
   renderMessages(); showTyping(); setTalking(false);
 
   const history = convos[selectedFriend].map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
@@ -530,6 +590,7 @@ async function sendMessage() {
       reply = '(error: ' + (data.error.message || JSON.stringify(data.error)) + ')';
     }
     convos[selectedFriend].push({ role: 'friend', content: reply });
+    saveConvos();
     renderMessages();
     // speak the reply
     speak(reply, selectedFriend);
@@ -540,6 +601,7 @@ async function sendMessage() {
   } catch(e) {
     hideTyping();
     convos[selectedFriend].push({ role: 'friend', content: '(connection error — try again)' });
+    saveConvos();
     renderMessages();
   }
   busy = false; document.getElementById('send-btn').disabled = false; inp.focus();
