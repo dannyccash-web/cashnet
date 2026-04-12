@@ -519,11 +519,16 @@ async function sendMessage() {
     const res = await fetch('https://sparkling-bar-7008.dannyccash.workers.dev/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 300, system: FRIENDS[selectedFriend].system, messages: history })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, system: FRIENDS[selectedFriend].system, messages: history })
     });
     const data = await res.json();
     hideTyping();
-    const reply = data.content?.[0]?.text || '(something went wrong)';
+    let reply = '(something went wrong)';
+    if (data.content && data.content[0] && data.content[0].text) {
+      reply = data.content[0].text;
+    } else if (data.error) {
+      reply = '(error: ' + (data.error.message || JSON.stringify(data.error)) + ')';
+    }
     convos[selectedFriend].push({ role: 'friend', content: reply });
     renderMessages();
     // speak the reply
