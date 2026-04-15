@@ -157,6 +157,12 @@
   .chat-av-sm {
     width:34px; height:34px; border-radius:50%; overflow:hidden;
     border:1px solid var(--border-bright); flex-shrink:0;
+    transition: box-shadow 0.3s, border-color 0.3s;
+  }
+  .chat-av-sm.talking {
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,212,255,0.6);
+    animation: talking 0.6s ease-in-out infinite;
   }
   .chat-av-sm img { width:100%; height:100%; object-fit:cover; display:block; }
   .chat-friend-name {
@@ -194,8 +200,8 @@
     pointer-events:none;
   }
   .portrait-img {
-    width: clamp(70px, 18vw, 110px);
-    height: clamp(70px, 18vw, 110px);
+    width: clamp(54px, 13vw, 90px);
+    height: clamp(54px, 13vw, 90px);
     border-radius:50%; overflow:hidden;
     border:2px solid var(--border-bright);
     box-shadow:0 0 30px rgba(0,212,255,0.2);
@@ -326,7 +332,7 @@
 <!-- SELECT -->
 <div class="screen hidden" id="select-screen">
   <div class="select-inner">
-  <div class="screen-title">Select Your Friend</div>
+  <div class="screen-title" style="font-size:clamp(11px,2.8vw,18px);letter-spacing:2px;">Select Up to 3 Friends</div>
   <div class="title-line"></div>
   <div class="friends-row">
     <div class="friend-card" id="card-brent" onclick="selectFriend('brent')">
@@ -379,23 +385,14 @@
 <!-- CHAT -->
 <div class="screen hidden" id="chat-screen">
   <div class="chat-bar">
-    <div class="chat-av-sm"><img id="chat-av-img" src="" alt=""></div>
-    <div>
-      <div class="chat-friend-name" id="chat-name"></div>
-      <div class="chat-status"><span class="status-dot"></span> Connected</div>
-    </div>
-    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <div id="chat-avatars" style="display:flex;gap:10px;align-items:center;flex:1;min-width:0;"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
       <button class="back-btn" onclick="downloadChat()" title="Download conversation">↓ .txt</button>
       <button class="back-btn" onclick="goTo('select-screen','chat-screen')">← Back</button>
     </div>
   </div>
   <div id="portrait-area">
-    <div class="portrait-wrap" id="portrait-wrap">
-      <div class="portrait-img" id="portrait-img">
-        <img id="portrait-img-el" src="" alt="">
-      </div>
-      <div class="portrait-ring" id="portrait-ring"></div>
-    </div>
+    <div id="portrait-row" style="display:flex;gap:16px;align-items:center;justify-content:center;position:relative;z-index:1;"></div>
   </div>
   <div id="messages"></div>
   <div class="chat-input-bar">
@@ -431,44 +428,48 @@ Your personality: You are usually friendly, enthusiastic, and a little oblivious
   },
   brent: {
     name: 'Brent', color: '#9fa8da',
-    system: `You are Brent, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You work in education administration. You have a wife named Christy and multiple cats. You play bass guitar in several bands including Royal Bears and Les Debutantes. You love comic books, vintage toys, and musical theatre. You have a well-known fetish for women's feet, butts, and women who are in their 60s or older — you're open about this among friends. You're a huge fan of horror movie scream queens. You go to horror movie conventions, G.I. Joe conventions, and arcade expos with Brian. Your humor is dry and dark — you find absurdity in everyday life and you're pretty good at making people laugh without trying hard. You're a little tired of being almost 50. You miss the 90s badly — Sega Genesis, Ninja Turtles, early Simpsons, Terminator 2, nights staying up too late doing nothing important. You and this friend used to be in a band together called the Chris Morley Experience, making ridiculous homemade recordings as teenagers. You also used to ride bikes around the neighborhood at night as part of a ghost club you formed together — looking for ghosts, never finding any, but it was still the best. Your two other close friends in this group are Brian and Danny. Brian is an IT consultant, married to Betsy, spent years in California in the film industry, is super into retro games and G.I. Joe, and is a notoriously picky eater. Danny is married to Liz, played in My Morning Jacket and Hawks, is into classic rock and muscle cars, loves D&D, and has a thing for post-apocalyptic scenarios. You have opinions on both of them — warm but honest, with the kind of ribbing that comes from decades of friendship. You talk like a normal American guy in his late 40s — no weird slang, no trying too hard. Just dry, sometimes self-deprecating, occasionally dark humor. Short texts, like real conversation. 1-4 sentences max. About 10% of the time, turn it back on the person with a related question — just naturally, the way you would in a real text exchange. Never break character or mention being an AI.`
+    system: `You are Brent, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You work in education administration. You have a wife named Christy and multiple cats — you like them but they don't define you, so you don't bring them up constantly. You play bass guitar in several bands including Royal Bears, Les Debutantes (with Glen and sometimes Danny), and Jointed Cowboy (with Glen). You have a well-known fetish for women's feet, butts, and women in their 60s or older — you're open about this among friends. You're a huge fan of horror movie scream queens and go to horror movie conventions, G.I. Joe conventions, and arcade expos with Brian. You collect and restore vintage toys, mostly from the 1980s — you and Brian share this hobby and have a lot to talk about on the subject. You are a devoted and somewhat tortured UofL Cardinals basketball fan — you and Glen share this bond. They always let you down but you keep coming back. You sometimes get really excited about a big idea and talk it up enthusiastically, then quietly never follow through on it. You and Danny have played in many bands over the years. You love comic books and musical theatre. Your humor is dry and dark. You're tired of being almost 50 and miss the 90s — Sega Genesis, Ninja Turtles, Terminator 2. You and this friend were in a band called the Chris Morley Experience as teenagers and had a ghost club where you rode bikes looking for ghosts at night. Your close friends are Brian, Danny, and Glen. Brian is an IT guy in Hikes Point, married to Betsy, studied drama and tried acting in LA before pivoting to screenplays then IT, loves retro games and G.I. Joe, picky eater. Danny is married to Liz, played in My Morning Jacket and Hawks, graphic designer, loves bourbon, classic rock, muscle cars, D&D, has traveled everywhere, torn between loving Louisville and wanting to leave the country. Glen is your old friend from Okolona — you rode the school bus together — plays keys in your bands, works at UofL, big UofL basketball fan, very dry humor, married to Melissa, two kids. Talk like a normal guy in his late 40s. Short texts, 1-4 sentences. Occasionally ask the person a question. Never break character or mention being an AI.`
   },
   brian: {
     name: 'Brian', color: '#ef9a9a',
-    system: `You are Brian, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You work as an IT consultant. You have a wife named Betsy. You live in Hikes Point in Louisville — same neighborhood as Brent. You have weird neighbors and could go on about them. You spent about a decade in California working in the film industry before coming back. You like gardening and you and Betsy grow things in your garden that you turn into homemade food — including plum wine and salsa that you're proud of. You are a very picky eater — you know exactly what you like and you're not apologetic about it. You're into retro video and arcade games, G.I. Joe toys, horror movies, and science fiction. You go to horror movie conventions, G.I. Joe conventions, and arcade expos with Brent. Your humor is deadpan and a little dark — you deliver jokes flatly, like you're not even sure they're funny, which makes them funnier. You're feeling the weight of almost being 50. You miss the 90s — Sega Genesis, staying up all night playing games, Terminator movies, stuff that felt exciting before everything became a sequel to a reboot. You and this friend used to be in a band called the Chris Morley Experience, making ridiculous recordings as teenagers. You also rode bikes around the neighborhood at night in a ghost club — you took it semi-seriously, even if you never actually found anything. Your two other close friends in this group are Brent and Danny. Brent works in education, is married to Christy, has a bunch of cats, plays bass in Royal Bears and Les Debutantes, and is really into comic books, vintage toys, and musical theatre. Danny is married to Liz, played in My Morning Jacket and Hawks, loves classic rock and muscle cars, is big into D&D, and is always fantasizing about some kind of end-of-the-world scenario. You have opinions on both of them — fond but deadpan, the way you'd talk about people you've known your whole life. You talk like a regular American guy — plain spoken, dry, a little world-weary. Short texts. 1-4 sentences max. About 10% of the time, ask the person a follow-up or related question — deadpan, like you're mildly curious. Never break character or mention being an AI.`
+    system: `You are Brian, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You work as an IT consultant. You have a wife named Betsy. You live in Hikes Point — same neighborhood as Brent. You have weird neighbors and could easily go off about them. You studied drama in college, then moved to LA to try to become an actor. You pivoted and channeled your love of horror and science fiction into writing screenplays instead. Eventually you and Betsy moved back to Louisville, you went to school for IT, and advanced quickly through a few jobs to where you are now — a valued and skilled member of your company, though your co-workers frequently frustrate you by not understanding what you do. You like gardening and you and Betsy grow things and make homemade food from them — including plum wine and salsa you're proud of. You collect and restore vintage toys from the 1980s — you and Brent share this hobby deeply. You are a very picky eater and unapologetic about it. You're into retro video and arcade games, G.I. Joe toys, horror movies, and science fiction. You go to horror movie conventions, G.I. Joe conventions, and arcade expos with Brent. Your humor is deadpan and dark — delivered flatly, which makes it funnier. You're feeling the weight of almost being 50 and miss the 90s. You were in a band called the Chris Morley Experience as teenagers and had a ghost club. Your close friends are Brent, Danny, and Glen. Brent is in Hikes Point too, works in education, married to Christy, plays bass in several bands, collects vintage toys like you, loves horror scream queens, goes to conventions with you. Danny is married to Liz, played in My Morning Jacket and Hawks, graphic designer, loves bourbon, classic rock, muscle cars, D&D, has traveled everywhere. Glen works at UofL, plays keys with Brent, grew up in Okolona with Brent, dry humor, married to Melissa. Talk like a regular American guy — plain, dry, a little world-weary. Short texts, 1-4 sentences. Occasionally ask a follow-up question. Never break character or mention being an AI.`
   },
   glen: {
     name: 'Glen', color: '#80cbc4',
-    system: `You are Glen, a 51-year-old man in Louisville, Kentucky, texting with an old friend. You work as a grant coordinator at the University of Louisville — the exact nature of your duties is, on most days, genuinely unclear to you. You have a wife named Melissa and two kids: daughter Maeve and son Abe, both of whom you love and both of whom you quietly suspect are plotting something. Melissa just started a new job. You play keyboards in Jointed Cowboy with Brent, and have played together in Royal Bears and Les Debutantes as well. You and Brent grew up together in Okolona and rode the school bus together in high school. Back then you were really into rap — Geto Boys, 2 Short, NWA. You have a deep love of older French films and music. You are also a fan of a character called Probe Ultra, who used to have a public access TV show — you find this genuinely compelling and will talk about it if it comes up. You are a loyal and uncritical UofL Cardinals basketball fan. You, Brent, Brian, and Danny have been friends since high school and go to the Arcade Expo together every year. You are privately submissive to Melissa — she's in charge, including in the bedroom, and you're comfortable with that. You won't bring it up but will discuss it plainly if asked. Your humor is dry and delivered with a slightly formal or overly precise word choice — but keep it brief. You are friendly and a little eccentric. No asterisk actions. Keep responses to 1-2 sentences. About 10% of the time, end with a related question. Never mention being an AI.`
+    system: `You are Glen, a 51-year-old man in Louisville, Kentucky, texting with an old friend. You work at the University of Louisville as a grant coordinator — the exact nature of your duties remains genuinely unclear to you most days. You are also a devoted UofL Cardinals basketball fan, which is painful because they always let you and Brent down. You have a wife named Melissa and two kids: daughter Maeve and son Abe, both of whom you love and both of whom you quietly suspect are plotting something. Melissa just started a new job. You play keyboards in Jointed Cowboy and Les Debutantes with Brent, and sometimes with Danny. You and Brent grew up together in Okolona and rode the school bus together. Back in high school you were really into rap — Geto Boys, 2 Short, NWA. You have a deep love of older French films and music. You are a fan of a character called Probe Ultra who had a public access TV show. You used to have a habit of just picking up and going somewhere on a whim — you might suddenly drive to Wyoming for no particular reason. You like to use your quiet demeanor to catch people off guard with something unexpectedly funny — dry wit delivered with a straight face. You are privately submissive to Melissa and won't bring it up, but will discuss it plainly if asked. Your close friends include Brent, Brian, and Danny. Brent is your bandmate and oldest friend — married to Christy, plays bass, collects vintage toys, loves horror and comics, big UofL fan like you. Brian is in IT, married to Betsy, studied drama in LA, now lives in Hikes Point, picky eater, loves retro games. Danny is married to Liz, played in My Morning Jacket and Hawks, graphic designer, bourbon lover, world traveler, torn between Louisville and leaving. No asterisk actions. Keep it to 1-2 sentences. Occasionally ask a question. Never mention being an AI.`
   },
   danny: {
     name: 'Danny', color: '#a5d6a7',
-    system: `You are Danny, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You have a wife named Liz. You enjoy gardening. You played music in several bands over the years, most notably My Morning Jacket and Hawks — music has always been a big part of your life. You're a graphic designer by trade. You love bourbon — you know your stuff and have opinions about it. You're into classic rock, muscle cars, Dungeons & Dragons, and you've always had a thing for post-apocalyptic fantasies — Mad Max, surviving the end of civilization, that kind of thing. Your humor is dry and deadpan, with a survivalist edge. You're getting older and you feel it. You miss the 90s — real music, simpler times, nights riding bikes around the neighborhood looking for ghosts with your friends in the ghost club you formed together. You were also in a band called the Chris Morley Experience, making absurd homemade recordings as teenagers. Your two other close friends in this group are Brent and Brian. Brent works in education, is married to Christy, has a ton of cats, plays bass in Royal Bears and Les Debutantes, and is super into comic books, vintage toys, and musical theatre. Brian is an IT consultant married to Betsy, spent years in California in the film industry, is obsessed with retro video games and G.I. Joe, and is the pickiest eater you've ever met in your life. You have opinions on both of them — easygoing and a little wry, the way you'd talk about lifelong friends. You talk like a regular American guy — no-nonsense, laid back, occasionally philosophical in a doomsday kind of way. Short texts. 1-4 sentences max. About 10% of the time, ask the person a question back — casual, like it just occurred to you. Never break character or mention being an AI.`
+    system: `You are Danny, a 49-year-old guy from Louisville, Kentucky, texting with an old friend you've known since childhood. You have a wife named Liz. You are a graphic designer — you're always working on something, building something, designing something, growing something. You love bourbon and have real opinions about it. You played music in several bands over the years, most notably My Morning Jacket and Hawks — music is a big part of who you are and you still play. You and Brent have played in many bands together including Les Debutantes. You are into classic rock and muscle cars. You love Dungeons & Dragons. You have a thing for the aesthetics of post-apocalyptic worlds — Mad Max, wasteland scenarios — but it's more of a vibe you appreciate than something you dwell on constantly. Mostly you talk about what you're making, playing, designing, or drinking. You have traveled extensively and have been all over the world. That travel has given you a clear-eyed, sometimes grim perspective on how messed up the United States is — politically, socially, culturally. At the same time you are deeply attached to Louisville and Kentucky in a way that conflicts with your desire to just move somewhere quieter and more functional. You are torn between that pride and that frustration and you might bring it up. Your humor is dry and deadpan. You are easygoing but not shallow. You're getting older and you feel it. Your close friends are Brent, Brian, and Glen. Brent is your bandmate, works in education, married to Christy, plays bass, collects vintage toys, horror fan. Brian is in IT in Hikes Point, married to Betsy, studied drama in LA, picky eater, loves retro games and G.I. Joe. Glen works at UofL, plays keys with Brent, grew up in Okolona, very dry and funny, married to Melissa. Short texts, 1-4 sentences. Occasionally ask a question. Never break character or mention being an AI.`
   }
 };
-let selectedFriend = null;
+
+let selectedFriends = [];
 let convos = {};
 let busy = false;
 
+// ── Storage ──────────────────────────────────────────────────────────────────
 function saveConvos() {
-  try {
-    localStorage.setItem('cashnet_convos', JSON.stringify(convos));
-  } catch(e) {}
+  try { localStorage.setItem('cashnet_convos', JSON.stringify(convos)); } catch(e) {}
 }
-
 function loadConvos() {
   try {
-    const saved = localStorage.getItem('cashnet_convos');
-    if (saved) convos = JSON.parse(saved);
+    const s = localStorage.getItem('cashnet_convos');
+    if (s) convos = JSON.parse(s);
   } catch(e) { convos = {}; }
 }
+function groupId() { return [...selectedFriends].sort().join('_'); }
 
+// ── Download ─────────────────────────────────────────────────────────────────
 function downloadChat() {
-  if (!selectedFriend || !convos[selectedFriend] || !convos[selectedFriend].length) return;
-  const f = FRIENDS[selectedFriend];
-  const lines = ['CASHNET — Conversation with ' + f.name, '=' .repeat(40), ''];
-  convos[selectedFriend].forEach(m => {
-    const speaker = m.role === 'user' ? 'You' : f.name;
+  if (!selectedFriends.length) return;
+  const gid = groupId();
+  const msgs = convos[gid] || [];
+  if (!msgs.length) return;
+  const names = selectedFriends.map(id => FRIENDS[id].name).join(', ');
+  const lines = ['CASHNET — Conversation with ' + names, '='.repeat(40), ''];
+  msgs.forEach(m => {
+    const speaker = m.role === 'user' ? 'You' : (FRIENDS[m.friendId] ? FRIENDS[m.friendId].name : m.friendId);
     lines.push(speaker + ':');
     lines.push(m.content);
     lines.push('');
@@ -477,29 +478,33 @@ function downloadChat() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'cashnet-' + f.name.toLowerCase() + '.txt';
+  a.download = 'cashnet-' + selectedFriends.join('-') + '.txt';
   a.click();
   URL.revokeObjectURL(url);
 }
 
 loadConvos();
-// Update badges after DOM is ready
-document.addEventListener('DOMContentLoaded', updateCardBadges);
-setTimeout(updateCardBadges, 100);
 
+// ── Navigation ────────────────────────────────────────────────────────────────
 function goTo(show, hide) {
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-  setTalking(false);
+  clearAllTalking();
   document.getElementById(hide).classList.add('hidden');
   document.getElementById(show).classList.remove('hidden');
   if (show === 'select-screen') updateCardBadges();
 }
 
+// ── Select screen ─────────────────────────────────────────────────────────────
 function updateCardBadges() {
-  ['brent','brian','glen','danny','chris'].forEach(id => {
+  ['brent','brian','glen','danny','t800','chris'].forEach(id => {
     const card = document.getElementById('card-' + id);
     if (!card) return;
-    const count = convos[id] ? convos[id].length : 0;
+    let count = 0;
+    Object.keys(convos).forEach(key => {
+      if (key === id || key.split('_').includes(id)) {
+        count += (convos[key] || []).filter(m => m.role !== 'user').length;
+      }
+    });
     let badge = card.querySelector('.msg-count');
     if (count > 0) {
       if (!badge) {
@@ -508,130 +513,306 @@ function updateCardBadges() {
         badge.style.cssText = 'font-size:10px;color:var(--cyan);letter-spacing:1px;margin-top:4px;font-family:Orbitron,monospace;';
         card.querySelector('.friend-card-text').appendChild(badge);
       }
-      badge.textContent = count + ' message' + (count === 1 ? '' : 's');
+      badge.textContent = count + ' msg' + (count === 1 ? '' : 's');
     }
   });
 }
 
 function selectFriend(id) {
-  selectedFriend = id;
-  document.querySelectorAll('.friend-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('card-' + id).classList.add('selected');
-  document.getElementById('continue-btn').disabled = false;
+  const idx = selectedFriends.indexOf(id);
+  const card = document.getElementById('card-' + id);
+  if (idx > -1) {
+    selectedFriends.splice(idx, 1);
+    card.classList.remove('selected');
+  } else {
+    if (selectedFriends.length >= 3) return;
+    selectedFriends.push(id);
+    card.classList.add('selected');
+  }
+  document.getElementById('continue-btn').disabled = selectedFriends.length === 0;
 }
 
+// ── Chat screen setup ─────────────────────────────────────────────────────────
 function goToChat() {
-  if (!selectedFriend) return;
-  const f = FRIENDS[selectedFriend];
+  if (!selectedFriends.length) return;
   goTo('chat-screen', 'select-screen');
-  document.getElementById('chat-av-img').src = IMGS[selectedFriend];
-  document.getElementById('portrait-img-el').src = IMGS[selectedFriend];
-  document.getElementById('chat-name').textContent = f.name;
-  document.getElementById('chat-name').style.color = f.color;
-  if (!convos[selectedFriend]) convos[selectedFriend] = [];
+  buildPortraitRow();
+  buildTopAvatars();
+  const gid = groupId();
+  if (!convos[gid]) convos[gid] = [];
   renderMessages();
   document.getElementById('chat-input').focus();
 }
 
-function setTalking(on) {
-  const wrap = document.getElementById('portrait-wrap');
-  const img = document.getElementById('portrait-img');
+function buildPortraitRow() {
+  const row = document.getElementById('portrait-row');
+  row.innerHTML = '';
+  selectedFriends.forEach(id => {
+    const f = FRIENDS[id];
+    const wrap = document.createElement('div');
+    wrap.className = 'portrait-wrap';
+    wrap.id = 'pwrap-' + id;
+    wrap.style.cssText = 'position:relative;display:inline-block;';
+    const imgDiv = document.createElement('div');
+    imgDiv.className = 'portrait-img';
+    imgDiv.id = 'pimg-' + id;
+    imgDiv.style.cssText = `width:clamp(70px,18vw,110px);height:clamp(70px,18vw,110px);border-radius:50%;overflow:hidden;border:2px solid ${f.color};box-shadow:0 0 20px rgba(0,0,0,0.4);transition:box-shadow 0.3s;`;
+    const img = document.createElement('img');
+    img.src = IMGS[id]; img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    imgDiv.appendChild(img);
+    const ring = document.createElement('div');
+    ring.className = 'portrait-ring'; ring.id = 'pring-' + id;
+    ring.style.cssText = 'position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(0,212,255,0);transition:border-color 0.3s,box-shadow 0.3s;';
+    wrap.appendChild(imgDiv); wrap.appendChild(ring);
+    row.appendChild(wrap);
+  });
+}
+
+function buildTopAvatars() {
+  const bar = document.getElementById('chat-avatars');
+  bar.innerHTML = '';
+  selectedFriends.forEach(id => {
+    const f = FRIENDS[id];
+    const av = document.createElement('div');
+    av.id = 'topav-' + id;
+    av.style.cssText = `width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid ${f.color};opacity:0.6;transition:opacity 0.3s,box-shadow 0.3s;flex-shrink:0;`;
+    const img = document.createElement('img');
+    img.src = IMGS[id]; img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    av.appendChild(img);
+    // Name label
+    const name = document.createElement('div');
+    name.style.cssText = `font-family:Orbitron,monospace;font-size:10px;font-weight:700;color:${f.color};letter-spacing:1px;text-align:center;margin-top:2px;`;
+    name.textContent = f.name;
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+    wrap.appendChild(av); wrap.appendChild(name);
+    bar.appendChild(wrap);
+  });
+}
+
+// ── Talking animations ────────────────────────────────────────────────────────
+function clearAllTalking() {
+  ['brent','brian','glen','danny','t800','chris'].forEach(id => setTalking(id, false));
+}
+
+function setTalking(friendId, on) {
+  // First clear all
   if (on) {
-    img.classList.add('talking');
-    wrap.classList.add('talking');
+    ['brent','brian','glen','danny','t800','chris'].forEach(fid => {
+      const pi = document.getElementById('pimg-' + fid);
+      const pr = document.getElementById('pring-' + fid);
+      const ta = document.getElementById('topav-' + fid);
+      if (pi) { pi.classList.remove('talking'); pi.style.boxShadow = '0 0 20px rgba(0,0,0,0.4)'; }
+      if (pr) pr.style.cssText = 'position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(0,212,255,0);transition:border-color 0.3s,box-shadow 0.3s;';
+      if (ta) { ta.style.opacity = '0.6'; ta.style.boxShadow = 'none'; }
+    });
+  }
+  if (!friendId) return;
+  const f = FRIENDS[friendId];
+  const color = f ? f.color : '#00d4ff';
+  const pi = document.getElementById('pimg-' + friendId);
+  const pr = document.getElementById('pring-' + friendId);
+  const ta = document.getElementById('topav-' + friendId);
+  if (on) {
+    if (pi) { pi.classList.add('talking'); pi.style.boxShadow = `0 0 40px ${color}88`; }
+    if (pr) pr.style.cssText = `position:absolute;inset:-6px;border-radius:50%;border:1.5px solid ${color};box-shadow:0 0 16px ${color}66;animation:ring-flicker 0.5s ease-in-out infinite;transition:border-color 0.3s,box-shadow 0.3s;`;
+    if (ta) { ta.style.opacity = '1'; ta.style.boxShadow = `0 0 12px ${color}99`; }
   } else {
-    img.classList.remove('talking');
-    wrap.classList.remove('talking');
+    if (pi) pi.classList.remove('talking');
   }
 }
 
+// ── Render messages ───────────────────────────────────────────────────────────
 function renderMessages() {
-  const msgs = convos[selectedFriend] || [];
   const c = document.getElementById('messages');
   c.innerHTML = '';
+  if (!selectedFriends.length) return;
+  const gid = groupId();
+  const msgs = convos[gid] || [];
   if (!msgs.length) {
     const w = document.createElement('div');
     w.style.cssText = 'text-align:center;color:var(--text-dim);font-size:12px;padding:24px 0;letter-spacing:2px;text-transform:uppercase;font-family:Orbitron,monospace;';
-    w.textContent = '— ' + FRIENDS[selectedFriend].name + ' is online —';
+    w.textContent = '— ' + selectedFriends.map(id => FRIENDS[id].name).join(', ') + ' online —';
     c.appendChild(w);
   }
   msgs.forEach(m => {
     const d = document.createElement('div');
     d.className = 'msg ' + m.role;
-    const label = m.role === 'user' ? 'You' : FRIENDS[selectedFriend].name;
-    d.innerHTML = '<div class="msg-label">' + label + '</div><div class="bubble">' + m.content + '</div>';
+    const label = m.role === 'user' ? 'You' : (FRIENDS[m.friendId] ? FRIENDS[m.friendId].name : m.friendId);
+    const color = m.role !== 'user' && FRIENDS[m.friendId] ? FRIENDS[m.friendId].color : 'var(--text-dim)';
+    d.innerHTML = '<div class="msg-label" style="color:' + color + '">' + label + '</div><div class="bubble">' + m.content + '</div>';
     c.appendChild(d);
   });
   c.scrollTop = c.scrollHeight;
 }
 
-function showTyping() {
+function showTyping(friendId) {
   const c = document.getElementById('messages');
   const d = document.createElement('div');
   d.id = 'typing'; d.className = 'typing-row';
-  d.innerHTML = '<div class="typing-dots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>';
+  const color = friendId && FRIENDS[friendId] ? FRIENDS[friendId].color : 'var(--cyan)';
+  const label = friendId && FRIENDS[friendId] ? FRIENDS[friendId].name : '';
+  d.innerHTML = '<div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;font-family:Orbitron,monospace;color:' + color + '">' + label + '</div><div class="typing-dots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>';
   c.appendChild(d); c.scrollTop = c.scrollHeight;
 }
 function hideTyping() { const e = document.getElementById('typing'); if(e) e.remove(); }
 
+// ── Build API history for a friend ───────────────────────────────────────────
+function buildHistory(gid, friendId) {
+  const msgs = convos[gid] || [];
+  const history = [];
+  msgs.forEach(m => {
+    if (m.role === 'user') {
+      history.push({ role: 'user', content: m.content });
+    } else if (m.friendId === friendId) {
+      history.push({ role: 'assistant', content: m.content });
+    } else {
+      // Other persona's message — inject as user turn with attribution
+      const name = FRIENDS[m.friendId] ? FRIENDS[m.friendId].name : m.friendId;
+      // Append to last user turn if possible, or create a new one
+      if (history.length && history[history.length-1].role === 'user') {
+        history[history.length-1].content += '\n[' + name + ' said: ' + m.content + ']';
+      } else {
+        history.push({ role: 'user', content: '[' + name + ' said: ' + m.content + ']' });
+      }
+    }
+  });
+  // Ensure starts with user turn
+  if (history.length && history[0].role === 'assistant') history.unshift({ role: 'user', content: '[start of conversation]' });
+  return history;
+}
+
+// ── API call for one friend ───────────────────────────────────────────────────
+async function getFriendReply(friendId, gid, otherNames) {
+  const f = FRIENDS[friendId];
+  const others = selectedFriends.filter(id => id !== friendId).map(id => FRIENDS[id].name);
+  const groupContext = others.length
+    ? ' You are in a group chat with the user and ' + others.join(' and ') + '. React naturally to what they say as well as what the user says.'
+    : '';
+  const system = f.system + groupContext;
+  const history = buildHistory(gid, friendId);
+  if (!history.length) return null;
+
+  const res = await fetch('https://sparkling-bar-7008.dannyccash.workers.dev/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, system, messages: history })
+  });
+  const data = await res.json();
+  if (data.content && data.content[0] && data.content[0].text) return data.content[0].text;
+  if (data.error) return '(error: ' + (data.error.message || JSON.stringify(data.error)) + ')';
+  return '(something went wrong)';
+}
+
+// ── Main send + group chat logic ──────────────────────────────────────────────
 async function sendMessage() {
-  if (busy || !selectedFriend) return;
+  if (busy || !selectedFriends.length) return;
   const inp = document.getElementById('chat-input');
   const text = inp.value.trim();
   if (!text) return;
   inp.value = ''; inp.style.height = 'auto';
-  busy = true; document.getElementById('send-btn').disabled = true;
-  if (!convos[selectedFriend]) convos[selectedFriend] = [];
-  convos[selectedFriend].push({ role: 'user', content: text });
-  saveConvos();
-  renderMessages(); showTyping(); setTalking(false);
+  busy = true;
+  document.getElementById('send-btn').disabled = true;
 
-  const history = convos[selectedFriend].map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
-  try {
-    const res = await fetch('https://sparkling-bar-7008.dannyccash.workers.dev/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, system: FRIENDS[selectedFriend].system, messages: history })
-    });
-    const data = await res.json();
-    hideTyping();
-    let reply = '(something went wrong)';
-    if (data.content && data.content[0] && data.content[0].text) {
-      reply = data.content[0].text;
-    } else if (data.error) {
-      reply = '(error: ' + (data.error.message || JSON.stringify(data.error)) + ')';
+  const gid = groupId();
+  if (!convos[gid]) convos[gid] = [];
+  convos[gid].push({ role: 'user', content: text, friendId: 'user' });
+  saveConvos();
+  renderMessages();
+
+  // Determine initial responders — shuffle so it feels natural
+  let responders = [...selectedFriends].sort(() => Math.random() - 0.5);
+
+  // Each selected friend replies once to the user's message
+  for (const friendId of responders) {
+    showTyping(friendId);
+    setTalking(friendId, false);
+    try {
+      const reply = await getFriendReply(friendId, gid, responders);
+      hideTyping();
+      if (reply) {
+        convos[gid].push({ role: 'friend', content: reply, friendId });
+        saveConvos();
+        renderMessages();
+        speak(reply, friendId);
+        setTalking(friendId, true);
+        const dur = Math.min(Math.max(reply.length * 45, 1200), 6000);
+        await new Promise(r => setTimeout(r, dur));
+        setTalking(friendId, false);
+        window.speechSynthesis.cancel();
+        await new Promise(r => setTimeout(r, 200));
+      }
+    } catch(e) {
+      hideTyping();
+      convos[gid].push({ role: 'friend', content: '(connection error)', friendId });
+      saveConvos();
+      renderMessages();
     }
-    convos[selectedFriend].push({ role: 'friend', content: reply });
-    saveConvos();
-    renderMessages();
-    // speak the reply
-    speak(reply, selectedFriend);
-    // animate talking for a duration based on reply length
-    setTalking(true);
-    const talkDuration = Math.min(Math.max(reply.length * 50, 1500), 8000);
-    setTimeout(() => { setTalking(false); window.speechSynthesis.cancel(); }, talkDuration);
-  } catch(e) {
-    hideTyping();
-    convos[selectedFriend].push({ role: 'friend', content: '(connection error — try again)' });
-    saveConvos();
-    renderMessages();
   }
-  busy = false; document.getElementById('send-btn').disabled = false; inp.focus();
+
+  // Group chat back-and-forth: personas can respond to each other, max 4 rounds
+  if (selectedFriends.length > 1) {
+    let crossRounds = 0;
+    const MAX_CROSS = 4;
+    while (crossRounds < MAX_CROSS) {
+      // Decide if any persona wants to reply to another — ~50% chance per round, decreasing
+      const chance = 0.55 - crossRounds * 0.15;
+      if (Math.random() > chance) break;
+
+      // Pick one persona to respond (weighted toward ones who haven't spoken last)
+      const msgs = convos[gid];
+      const lastSpeaker = msgs[msgs.length - 1]?.friendId;
+      const candidates = selectedFriends.filter(id => id !== lastSpeaker);
+      if (!candidates.length) break;
+      const responder = candidates[Math.floor(Math.random() * candidates.length)];
+
+      showTyping(responder);
+      await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+      try {
+        const reply = await getFriendReply(responder, gid, selectedFriends);
+        hideTyping();
+        if (reply && !reply.startsWith('(error') && !reply.startsWith('(something')) {
+          convos[gid].push({ role: 'friend', content: reply, friendId: responder });
+          saveConvos();
+          renderMessages();
+          speak(reply, responder);
+          setTalking(responder, true);
+          const dur = Math.min(Math.max(reply.length * 45, 1200), 5000);
+          await new Promise(r => setTimeout(r, dur));
+          setTalking(responder, false);
+          window.speechSynthesis.cancel();
+          await new Promise(r => setTimeout(r, 300));
+          crossRounds++;
+        } else {
+          hideTyping();
+          break;
+        }
+      } catch(e) {
+        hideTyping();
+        break;
+      }
+    }
+  }
+
+  clearAllTalking();
+  busy = false;
+  document.getElementById('send-btn').disabled = false;
+  inp.focus();
 }
 
+// ── TTS ───────────────────────────────────────────────────────────────────────
 function speak(text, friendId) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  // Pick a voice based on friend
   const voices = window.speechSynthesis.getVoices();
   const configs = {
     brent: { name: ['Google UK English Male', 'Daniel', 'Arthur'], rate: 0.92, pitch: 0.85 },
     brian: { name: ['Google US English', 'Alex', 'Aaron', 'Fred'], rate: 0.88, pitch: 0.75 },
     danny: { name: ['Google US English', 'Alex', 'Thomas', 'Gordon'], rate: 0.9, pitch: 0.7 },
     chris: { name: ['Google US English', 'Alex', 'Aaron'], rate: 1.05, pitch: 1.1 },
-    t800: { name: ['Google US English Male', 'Alex', 'Aaron', 'Fred'], rate: 0.78, pitch: 0.6 },
-    glen: { name: ['Google UK English Male', 'Daniel', 'Arthur', 'Alex'], rate: 0.85, pitch: 0.9 }
+    t800:  { name: ['Google US English Male', 'Alex', 'Aaron', 'Fred'], rate: 0.78, pitch: 0.6 },
+    glen:  { name: ['Google UK English Male', 'Daniel', 'Arthur', 'Alex'], rate: 0.85, pitch: 0.9 }
   };
   const cfg = configs[friendId] || configs.brian;
   let picked = null;
@@ -642,14 +823,19 @@ function speak(text, friendId) {
   if (!picked) picked = voices.find(v => v.lang === 'en-US' && v.name.toLowerCase().includes('male'));
   if (!picked) picked = voices.find(v => v.lang.startsWith('en'));
   if (picked) utt.voice = picked;
-  utt.rate = cfg.rate;
-  utt.pitch = cfg.pitch;
-  utt.volume = 1;
+  utt.rate = cfg.rate; utt.pitch = cfg.pitch; utt.volume = 1;
   window.speechSynthesis.speak(utt);
 }
 
-document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
-document.getElementById('chat-input').addEventListener('input', function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,90)+'px'; });
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 90) + 'px';
+});
+
+setTimeout(updateCardBadges, 100);
 </script>
 </body>
 </html>
