@@ -401,7 +401,6 @@
   <div class="cashnet-sub">Speak with your <em>not-quite-alive friends!</em></div>
   <button class="btn-primary" onclick="goTo('select-screen','start-screen')">Get Started</button>
     <button class="btn-primary" onclick="goTo('vcall-select-screen','start-screen')" style="margin-top:12px;border-color:rgba(0,255,136,0.5);color:rgba(0,255,136,0.85);box-shadow:0 0 20px rgba(0,255,136,0.1);">📹 Video Call</button>
-  <a href="cashworld.html" style="margin-top:14px;display:inline-block;padding:11px 28px;border:1px solid rgba(0,212,255,0.35);border-radius:8px;color:rgba(0,212,255,0.8);font-size:0.82em;letter-spacing:2px;text-decoration:none;text-transform:uppercase;transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(0,212,255,0.8)';this.style.color='#fff';this.style.boxShadow='0 0 20px rgba(0,212,255,0.2)'" onmouseout="this.style.borderColor='rgba(0,212,255,0.35)';this.style.color='rgba(0,212,255,0.8)';this.style.boxShadow='none'">🌍 Visit Cashworld</a>
 </div>
 
 <!-- VCALL SELECT -->
@@ -1422,7 +1421,7 @@ function drawStreet(ctx, pid) {
     px(ctx,x,y,w,h,c);
     // windows
     for(let wy=y+8;wy<y+h-8;wy+=14) for(let wx=x+6;wx<x+w-6;wx+=12){
-      ctx.fillStyle=Math.random()<0.6?'#ffffaa':'#334':px(ctx,wx,wy,7,9,'#ffffaa44');
+      if(Math.random()<0.6){ px(ctx,wx,wy,7,9,'#ffffaa'); }
       if(Math.random()<0.5) px(ctx,wx,wy,7,9,'#ffffaa');
     }
   });
