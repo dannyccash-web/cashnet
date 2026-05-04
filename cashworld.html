@@ -2,1102 +2,761 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cashworld</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#1a1a2e; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; overflow:hidden; font-family:'Courier New',monospace; }
-#game-container { position:relative; }
-canvas { display:block; }
-
-/* Dialog bar */
-#dialog-bar {
-  position:absolute; bottom:0; left:0; right:0;
-  height:160px; background:#1a0a2e;
-  border-top:3px solid #7c3aed;
-  display:none; flex-direction:row; align-items:stretch;
-  z-index:100;
-}
-#dialog-portrait {
-  width:130px; min-width:130px;
-  background:#2d1b4e;
-  border-right:3px solid #7c3aed;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:8px; padding:10px;
-}
-#dialog-portrait-canvas { border-radius:50%; border:2px solid #7c3aed; }
-#dialog-name {
-  color:#e9d5ff; font-size:13px; font-weight:bold;
-  text-align:center; font-family:'Courier New',monospace;
-}
-#dialog-body {
-  flex:1; display:flex; flex-direction:column; padding:12px 16px; gap:8px;
-}
-#dialog-text {
-  flex:1; color:#e9d5ff; font-size:14px; line-height:1.5;
-  font-family:'Courier New',monospace; overflow-y:auto;
-  white-space:pre-wrap;
-}
-#dialog-input-row {
-  display:flex; gap:8px; align-items:center;
-}
-#dialog-input {
-  flex:1; background:#0d0520; border:2px solid #7c3aed;
-  color:#e9d5ff; font-family:'Courier New',monospace;
-  font-size:13px; padding:6px 10px; border-radius:6px; outline:none;
-}
-#dialog-input:focus { border-color:#a855f7; }
-#dialog-send {
-  background:#7c3aed; color:white; border:none; padding:6px 14px;
-  border-radius:6px; cursor:pointer; font-family:'Courier New',monospace;
-  font-size:13px;
-}
-#dialog-send:hover { background:#9333ea; }
-#dialog-close {
-  position:absolute; top:8px; right:12px;
-  background:none; border:none; color:#a855f7;
-  font-size:20px; cursor:pointer; line-height:1;
-}
-#dialog-close:hover { color:#e9d5ff; }
-#thinking-dot { color:#a855f7; display:none; }
-
-/* Minimap */
-#minimap {
-  position:absolute; top:10px; right:10px;
-  background:rgba(0,0,0,0.6); border:2px solid #7c3aed;
-  border-radius:6px; padding:4px;
-}
-#minimap canvas { display:block; border-radius:3px; }
-
-/* Clock */
-#clock {
-  position:absolute; top:10px; left:10px;
-  background:rgba(26,10,46,0.85); border:2px solid #7c3aed;
-  border-radius:8px; padding:6px 12px;
-  color:#e9d5ff; font-size:13px; font-family:'Courier New',monospace;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;font-family:'Courier New',monospace}
+#wrap{position:relative;width:1024px;height:576px}
+#game{display:block;border:2px solid #7c3aed;border-radius:4px}
+#clock{position:absolute;top:8px;left:8px;background:rgba(26,10,46,.88);border:2px solid #7c3aed;border-radius:8px;padding:5px 12px;color:#e9d5ff;font-size:12px;pointer-events:none;z-index:10}
+#minimap-wrap{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.65);border:2px solid #7c3aed;border-radius:6px;padding:3px;z-index:10}
+#minimap{display:block;border-radius:3px}
+#hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(26,10,46,.8);border:1px solid #7c3aed;border-radius:6px;padding:4px 14px;color:#c4b5fd;font-size:11px;pointer-events:none;z-index:10;opacity:0;transition:opacity .3s}
+#dialog{position:absolute;bottom:0;left:0;right:0;height:155px;background:#1a0a2e;border-top:3px solid #7c3aed;display:none;z-index:20}
+#dp{position:absolute;left:0;top:0;bottom:0;width:125px;background:#2d1b4e;border-right:3px solid #7c3aed;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
+#dp canvas{border-radius:50%;border:2px solid #7c3aed}
+#dname{color:#e9d5ff;font-size:12px;font-weight:bold;text-align:center}
+#dbody{position:absolute;left:125px;right:0;top:0;bottom:0;display:flex;flex-direction:column;padding:10px 14px;gap:7px}
+#dtext{flex:1;color:#e9d5ff;font-size:13px;line-height:1.5;overflow-y:auto;white-space:pre-wrap;font-family:'Courier New',monospace}
+#drow{display:flex;gap:7px;align-items:center}
+#dinput{flex:1;background:#0d0520;border:2px solid #7c3aed;color:#e9d5ff;font-family:'Courier New',monospace;font-size:13px;padding:5px 9px;border-radius:6px;outline:none}
+#dinput:focus{border-color:#a855f7}
+#dsend{background:#7c3aed;color:#fff;border:none;padding:5px 13px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Courier New',monospace}
+#dsend:hover{background:#9333ea}
+#dclose{position:absolute;top:6px;right:10px;background:none;border:none;color:#a855f7;font-size:18px;cursor:pointer;line-height:1}
+#dclose:hover{color:#e9d5ff}
+#thinking{color:#a855f7;font-size:13px;display:none}
 </style>
 </head>
 <body>
-<div id="game-container">
-  <canvas id="minimap-canvas"></canvas>
-  <div id="clock">🕐 <span id="clock-time">--:-- --</span></div>
-  <div id="minimap"><canvas id="minimap-canvas2" width="120" height="90"></canvas></div>
-  <div id="dialog-bar">
-    <div id="dialog-portrait">
-      <canvas id="dialog-portrait-canvas" width="80" height="80"></canvas>
-      <div id="dialog-name">---</div>
+<div id="wrap">
+  <canvas id="game" width="1024" height="576"></canvas>
+  <div id="clock">🕐 <span id="ctime">--:-- --</span></div>
+  <div id="minimap-wrap"><canvas id="minimap" width="130" height="98"></canvas></div>
+  <div id="hint">Press E to talk</div>
+  <div id="dialog">
+    <div id="dp">
+      <canvas id="portrait" width="80" height="80"></canvas>
+      <div id="dname">---</div>
     </div>
-    <div id="dialog-body">
-      <div id="dialog-text"></div>
-      <div id="dialog-input-row">
-        <input id="dialog-input" type="text" placeholder="Say something... (try 'jump' or 'dance')">
-        <button id="dialog-send">Send</button>
-        <span id="thinking-dot">...</span>
+    <div id="dbody">
+      <div id="dtext"></div>
+      <div id="drow">
+        <input id="dinput" type="text" placeholder="Say something… (try: jump, dance, wave)">
+        <button id="dsend">Send</button>
+        <span id="thinking">…</span>
       </div>
     </div>
-    <button id="dialog-close">✕</button>
+    <button id="dclose">✕</button>
   </div>
 </div>
 
 <script>
-// ============================================================
-// CONSTANTS & CONFIG
-// ============================================================
+// ─── CONFIG ────────────────────────────────────────────────
 const WORKER = 'https://sparkling-bar-7008.dannyccash.workers.dev/';
-const W = 1024, H = 576, WORLD_W = 2400, WORLD_H = 1800;
+const WW = 2400, WH = 1800; // world size
+const VW = 1024, VH = 576;  // viewport
 
 const PERSONAS = {
-  t800:  { name:'T-800',  color:'#546e7a', vis:{ bodyColor:0x546e7a, pantsColor:0x263238, skinTone:0xb0bec5, hairStyle:'none',   eyeColor:0xff1a00, mouthStyle:'serious', isRobot:true  }, system:`You are the T-800 (Model 101), a Terminator living in Cashworld. You were sent back from 2029, but somewhere between the time-jump and now you ended up here. You have grudgingly accepted this. You speak in clipped, precise sentences. You never show fear. You are learning what "fun" is, with mixed results. You occasionally reference mission parameters and threat assessments. You live in a steel-reinforced bunker on the north side of Cashworld. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE] — embed one in your reply if the human asks you to do something physical. Keep replies under 60 words.` },
-  chris: { name:'Chris',  color:'#ff8c00', vis:{ bodyColor:0xffcc80, pantsColor:0x1565c0, skinTone:0xffccaa, hairColor:0x8B4513, hairStyle:'spiky',  eyeColor:0x3d2b1f, mouthStyle:'happy',  hasFlames:true, hasZit:true }, system:`You are Chris, the chaotic hype-man of Cashworld. You ride a skateboard everywhere, eat cereal at 2am, and have strong opinions about everything from hot sauces to space exploration. You have a small zit on your forehead that you're self-conscious about. Your hair sometimes appears to be on fire (it's fine, it's a vibe). You speak in bursts of energy, use slang, trail off into tangents, then circle back. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE]. Keep replies under 60 words.` },
-  brent: { name:'Brent',  color:'#9fa8da', vis:{ bodyColor:0x9fa8da, pantsColor:0x283593, skinTone:0xffd5b5, hairColor:0x5d3a1a, hairStyle:'normal', eyeColor:0x3d2b1f, mouthStyle:'smile'  }, system:`You are Brent, the mild-mannered optimist of Cashworld. You work at a small accounting firm, enjoy long walks, sudoku, and genuinely believe everything will work out fine. You're the kind of person who brings a card when someone gets a new stapler. You speak warmly, a little formally, and always try to find the bright side. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE]. Keep replies under 60 words.` },
-  brian: { name:'Brian',  color:'#ef9a9a', vis:{ bodyColor:0xef9a9a, pantsColor:0x212121, skinTone:0xffd5b5, hairColor:0x212121, hairStyle:'flat',   eyeColor:0x3d2b1f, mouthStyle:'weary'  }, system:`You are Brian, the world-weary creative of Cashworld. You write poetry nobody reads, drink too much black coffee, and feel deeply misunderstood — though you'd never say it that way. You speak with dry wit, long pauses, and occasional flashes of unexpected warmth. Everything is kind of a lot. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE]. Keep replies under 60 words.` },
-  glen:  { name:'Glen',   color:'#80cbc4', vis:{ bodyColor:0x80cbc4, pantsColor:0x37474f, skinTone:0xffd5b5, hairColor:0x6d4c41, hairStyle:'curly',  eyeColor:0x3d2b1f, mouthStyle:'smile'  }, system:`You are Glen, the laid-back philosopher of Cashworld. You work part-time at the café, spend hours thinking about consciousness, and have a laugh that's completely out of proportion. You're weirdly good at reading people. You speak in a relaxed, curious way — questions as statements, half-jokes with real insight inside. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE]. Keep replies under 60 words.` },
-  danny: { name:'Danny',  color:'#a5d6a7', vis:{ bodyColor:0xa5d6a7, pantsColor:0x1a1a2e, skinTone:0xffd5b5, hairColor:0x1a1a1a, hairStyle:'medium', eyeColor:0x3d2b1f, mouthStyle:'smile'  }, system:`You are Danny, the founder of Cashnet and de-facto mayor of Cashworld. You built everything here and you're quietly proud of it. You like good design, strong opinions, and making things that work. You're direct, a little dry, but genuinely invested in the people around you. You have the energy of someone who has too many ideas and not enough hours. You can respond to actions like [action:JUMP], [action:WAVE], [action:SPIN], [action:DANCE], [action:NOD], [action:SHAKE]. Keep replies under 60 words.` },
+  t800:  { name:'T-800',  dot:'#546e7a', body:{ body:'#546e7a', pants:'#263238', skin:'#b0bec5', hair:null,    hstyle:'none',   eye:'#ff1a00', mouth:'serious', robot:true  }, sys:`You are the T-800 (Model 101), a Terminator living in Cashworld. Sent back from 2029, ended up here instead. You grudgingly accept this. Clipped, precise sentences. No fear. Learning what "fun" means, with mixed results. You can embed one action in your reply: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+  chris: { name:'Chris',  dot:'#ff8c00', body:{ body:'#ffcc80', pants:'#1565c0', skin:'#ffccaa', hair:'#8B4513', hstyle:'spiky',  eye:'#3d2b1f', mouth:'happy',  flames:true, zit:true }, sys:`You are Chris, the chaotic hype-man of Cashworld. Skateboard everywhere, strong opinions, energy bursts, slang, tangents. Small zit you're self-conscious about. Hair occasionally appears on fire (it's fine). Embed one action if asked: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+  brent: { name:'Brent',  dot:'#9fa8da', body:{ body:'#9fa8da', pants:'#283593', skin:'#ffd5b5', hair:'#5d3a1a', hstyle:'normal', eye:'#3d2b1f', mouth:'smile'  }, sys:`You are Brent, the mild-mannered optimist. Accounting firm, sudoku, long walks, cards for coworkers. Warm, slightly formal, always finding the bright side. Embed an action if asked: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+  brian: { name:'Brian',  dot:'#ef9a9a', body:{ body:'#ef9a9a', pants:'#212121', skin:'#ffd5b5', hair:'#212121', hstyle:'flat',   eye:'#3d2b1f', mouth:'weary'  }, sys:`You are Brian, world-weary creative. Poetry nobody reads, black coffee, dry wit, unexpected warmth. Everything is kind of a lot. Embed an action if asked: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+  glen:  { name:'Glen',   dot:'#80cbc4', body:{ body:'#80cbc4', pants:'#37474f', skin:'#ffd5b5', hair:'#6d4c41', hstyle:'curly',  eye:'#3d2b1f', mouth:'smile'  }, sys:`You are Glen, laid-back philosopher. Part-time café, thinks about consciousness, laugh way too big. Relaxed and curious. Embed an action if asked: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+  danny: { name:'Danny',  dot:'#a5d6a7', body:{ body:'#a5d6a7', pants:'#1a1a2e', skin:'#ffd5b5', hair:'#1a1a1a', hstyle:'medium', eye:'#3d2b1f', mouth:'smile'  }, sys:`You are Danny, founder of Cashnet and de-facto mayor of Cashworld. Built everything, quietly proud. Direct, dry, genuinely invested. Too many ideas, not enough hours. Embed an action if asked: [action:JUMP] [action:WAVE] [action:SPIN] [action:DANCE] [action:NOD] [action:SHAKE]. Under 60 words.` },
+};
+
+const ZONES = {
+  home:  [{x:200,y:220},{x:310,y:200},{x:180,y:320},{x:350,y:260},{x:240,y:380},{x:290,y:170}],
+  work:  [{x:1800,y:280},{x:1900,y:240},{x:1760,y:390},{x:1860,y:340},{x:1960,y:290},{x:1810,y:440}],
+  park:  [{x:1210,y:910},{x:1110,y:960},{x:1310,y:860},{x:1210,y:1010},{x:1010,y:910},{x:1360,y:960}],
+  cafe:  [{x:610,y:1420},{x:710,y:1370},{x:560,y:1510},{x:660,y:1460},{x:760,y:1410},{x:610,y:1310}],
+  venue: [{x:1810,y:1420},{x:1910,y:1370},{x:1760,y:1470},{x:1860,y:1320},{x:2010,y:1420},{x:1710,y:1520}],
 };
 
 const SCHEDULE = {
-  t800:  [{ start:1,end:8,zone:'home',label:'Recharging' },{ start:8,end:17,zone:'work',label:'Patrolling' },{ start:17,end:24,zone:'venue',label:'Assessing threats at The Venue' }],
-  chris: [{ start:1,end:8,zone:'home',label:'Passed out' },{ start:8,end:12,zone:'park',label:'Skating' },{ start:12,end:17,zone:'work',label:'Day job (barely)' },{ start:17,end:24,zone:'venue',label:'Vibing at The Venue' }],
-  brent: [{ start:1,end:8,zone:'home',label:'Sleeping' },{ start:8,end:17,zone:'work',label:'Working diligently' },{ start:17,end:21,zone:'park',label:'Evening walk' },{ start:21,end:24,zone:'home',label:'Winding down' }],
-  brian: [{ start:1,end:9,zone:'home',label:'Restless sleep' },{ start:9,end:14,zone:'cafe',label:'Writing (staring at coffee)' },{ start:14,end:19,zone:'park',label:'Brooding walk' },{ start:19,end:24,zone:'venue',label:'Performing at The Venue' }],
-  glen:  [{ start:1,end:8,zone:'home',label:'Sleeping' },{ start:8,end:13,zone:'cafe',label:'Café shift' },{ start:13,end:18,zone:'park',label:'Thinking deeply' },{ start:18,end:24,zone:'venue',label:'Hanging at The Venue' }],
-  danny: [{ start:1,end:7,zone:'home',label:'Sleeping' },{ start:7,end:12,zone:'work',label:'Building things' },{ start:12,end:14,zone:'cafe',label:'Lunch' },{ start:14,end:19,zone:'work',label:'More building' },{ start:19,end:24,zone:'venue',label:'Unwinding at The Venue' }],
+  t800:  [{s:1,e:8,z:'home'},{s:8,e:17,z:'work'},{s:17,e:24,z:'venue'}],
+  chris: [{s:1,e:8,z:'home'},{s:8,e:12,z:'park'},{s:12,e:17,z:'work'},{s:17,e:24,z:'venue'}],
+  brent: [{s:1,e:8,z:'home'},{s:8,e:17,z:'work'},{s:17,e:21,z:'park'},{s:21,e:24,z:'home'}],
+  brian: [{s:1,e:9,z:'home'},{s:9,e:14,z:'cafe'},{s:14,e:19,z:'park'},{s:19,e:24,z:'venue'}],
+  glen:  [{s:1,e:8,z:'home'},{s:8,e:13,z:'cafe'},{s:13,e:18,z:'park'},{s:18,e:24,z:'venue'}],
+  danny: [{s:1,e:7,z:'home'},{s:7,e:12,z:'work'},{s:12,e:14,z:'cafe'},{s:14,e:19,z:'work'},{s:19,e:24,z:'venue'}],
 };
 
-// Zone target areas (world coords)
-const ZONES = {
-  home:  [{x:200,y:200},{x:300,y:250},{x:180,y:300},{x:350,y:200},{x:230,y:350},{x:280,y:180}],
-  work:  [{x:1800,y:300},{x:1900,y:250},{x:1750,y:400},{x:1850,y:350},{x:1950,y:300},{x:1800,y:450}],
-  park:  [{x:1200,y:900},{x:1100,y:950},{x:1300,y:850},{x:1200,y:1000},{x:1000,y:900},{x:1350,y:950}],
-  cafe:  [{x:600,y:1400},{x:700,y:1350},{x:550,y:1500},{x:650,y:1450},{x:750,y:1400},{x:600,y:1300}],
-  venue: [{x:1800,y:1400},{x:1900,y:1350},{x:1750,y:1450},{x:1850,y:1300},{x:2000,y:1400},{x:1700,y:1500}],
-};
+const AMBIENT = ['Hey, how\'s it going?','Wild day in Cashworld.','You seen the news?','I\'ve been thinking lately…','What are you up to?','Can you believe it?','I had the strangest dream.','Do you ever wonder why?'];
 
-// Conversation starters for ambient NPC chat
-const AMBIENT_OPENERS = [
-  "Hey, how's your day going?",
-  "Nice weather in Cashworld today.",
-  "Did you hear about the new update?",
-  "I've been thinking a lot lately.",
-  "What are you up to?",
-  "Can you believe it's already this late?",
-  "I had the strangest dream.",
-  "Do you ever wonder what it's all for?",
-];
+// ─── DRAWING HELPERS ───────────────────────────────────────
+function hex(c){ return typeof c==='string'?c:'#'+c.toString(16).padStart(6,'0'); }
 
-// ============================================================
-// PHASER GAME
-// ============================================================
-class GameScene extends Phaser.Scene {
-  constructor() { super('GameScene'); }
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
 
-  preload() {
-    // Generate terrain tiles programmatically in create()
+function adjustColor(hexNum, amt){
+  const r=Math.max(0,Math.min(255,((hexNum>>16)&0xff)+amt));
+  const g=Math.max(0,Math.min(255,((hexNum>>8)&0xff)+amt));
+  const b=Math.max(0,Math.min(255,(hexNum&0xff)+amt));
+  return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+// Draw Animal Crossing-style character
+// Origin: feet at (0,0)
+function drawChar(ctx, cfg, opts={}){
+  const { waving=false, sleeping=false, flipX=false } = opts;
+  const sc = flipX ? -1 : 1;
+  ctx.save();
+  ctx.scale(sc, 1);
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(0,3,17,5,0,0,Math.PI*2); ctx.fill();
+
+  // shoes
+  ctx.fillStyle='#333';
+  roundRect(ctx,-14,-9,13,8,3); ctx.fill();
+  roundRect(ctx,1,-9,13,8,3); ctx.fill();
+
+  // pants/legs
+  ctx.fillStyle=hex(cfg.pants);
+  roundRect(ctx,-12,-22,10,14,3); ctx.fill();
+  roundRect(ctx,2,-22,10,14,3); ctx.fill();
+
+  // body
+  ctx.fillStyle=hex(cfg.body);
+  roundRect(ctx,-13,-42,26,22,7); ctx.fill();
+
+  // arms
+  ctx.fillStyle=hex(cfg.body);
+  if(waving){
+    roundRect(ctx,-22,-41,10,16,5); ctx.fill(); // left normal
+    roundRect(ctx,12,-55,10,18,5); ctx.fill(); // right raised
+  } else {
+    roundRect(ctx,-22,-41,10,16,5); ctx.fill();
+    roundRect(ctx,12,-41,10,16,5); ctx.fill();
   }
 
-  create() {
-    // Fix keyboard capture so HTML inputs work
-    this.input.keyboard.disableGlobalCapture();
-
-    this.dialogOpen = false;
-    this.activePerson = null;
-    this.conversationHistory = {};
-
-    this.createWorld();
-    this.createPlayer();
-    this.createNPCs();
-    this.setupCamera();
-    this.setupControls();
-    this.setupDialogUI();
-    this.setupAmbientChat();
-    this.setupMinimap();
-
-    // Clock update
-    this.time.addEvent({ delay:30000, loop:true, callback:this.updateNPCSchedules, callbackScope:this });
-    this.updateNPCSchedules();
-    this.updateClock();
-    setInterval(() => this.updateClock(), 30000);
-  }
-
-  // ----------------------------------------------------------
-  // WORLD CREATION
-  // ----------------------------------------------------------
-  createWorld() {
-    const g = this.add.graphics();
-
-    // Grass base
-    g.fillStyle(0x4a7c59); g.fillRect(0,0,WORLD_W,WORLD_H);
-
-    // Darker grass patches
-    for(let i=0;i<120;i++){
-      g.fillStyle(Phaser.Math.Between(0,1)?0x3d6b4a:0x537a5e, 0.4+Math.random()*0.3);
-      g.fillCircle(Math.random()*WORLD_W, Math.random()*WORLD_H, 20+Math.random()*60);
-    }
-
-    // Main horizontal road (y=840-920)
-    g.fillStyle(0x555566); g.fillRect(0,840,WORLD_W,80);
-    g.fillStyle(0x666677); g.fillRect(0,852,WORLD_W,56);
-    // Road markings
-    g.fillStyle(0xffee55,0.7);
-    for(let x=0;x<WORLD_W;x+=120){ g.fillRect(x,878,60,4); }
-
-    // Vertical road (x=1100-1180)
-    g.fillStyle(0x555566); g.fillRect(1100,0,80,WORLD_H);
-    g.fillStyle(0x666677); g.fillRect(1112,0,56,WORLD_H);
-    g.fillStyle(0xffee55,0.7);
-    for(let y=0;y<WORLD_H;y+=120){ g.fillRect(1128,y,4,60); }
-
-    // Sidewalks
-    g.fillStyle(0x9999aa,0.8);
-    g.fillRect(0,820,WORLD_W,20); g.fillRect(0,920,WORLD_W,20); // horizontal road sidewalks
-    g.fillRect(1080,0,20,WORLD_H); g.fillRect(1180,0,20,WORLD_H); // vertical road sidewalks
-
-    // Zone: Home area (top-left) - cozy houses
-    this.drawBuilding(g, 100,80,180,160,0x8b5e3c,'#HOME',true);
-    this.drawBuilding(g, 320,80,150,140,0x7a8c5e,'',true);
-    this.drawBuilding(g, 80,280,140,130,0x5e7a8c,'',true);
-
-    // Zone: Work area (right side)
-    this.drawBuilding(g, 1650,80,280,220,0x546e7a,'CASHNET HQ',false);
-    this.drawBuilding(g, 1970,120,160,180,0x607d8b,'',false);
-    this.drawBuilding(g, 1680,340,200,150,0x78909c,'',false);
-
-    // Zone: Park (center)
-    g.fillStyle(0x5d9e6d); g.fillCircle(1200,900,220);
-    g.fillStyle(0x4a8a5a); g.fillCircle(1200,900,180);
-    // Park trees
-    this.drawTree(g,1050,780); this.drawTree(g,1350,780);
-    this.drawTree(g,1020,1000); this.drawTree(g,1380,1000);
-    this.drawTree(g,1200,760); this.drawTree(g,1200,1040);
-    // Pond
-    g.fillStyle(0x4499bb,0.8); g.fillEllipse(1200,900,140,100);
-    g.fillStyle(0x55aacc,0.4); g.fillEllipse(1200,895,110,80);
-
-    // Zone: Café (bottom-left)
-    this.drawBuilding(g, 450,1300,200,160,0xd4a574,'☕ CAFÉ',false);
-    // Café tables outside
-    for(let i=0;i<3;i++){
-      g.fillStyle(0xa0784a); g.fillCircle(580+i*50,1280,12);
-      g.fillStyle(0x8b6340); g.fillRect(575+i*50,1276,10,30);
-    }
-
-    // Zone: The Venue (bottom-right)
-    this.drawBuilding(g, 1650,1280,320,250,0x4a1560,'★ THE VENUE',false);
-    // Neon effect
-    g.lineStyle(3,0xff00ff,0.6); g.strokeRect(1650,1280,320,250);
-    g.lineStyle(2,0x00ffff,0.4); g.strokeRect(1658,1288,304,234);
-
-    // Scattered trees
-    const treeSpots=[[300,600],[500,400],[700,700],[900,500],[1500,600],[1600,400],[400,1100],[800,1200],[1500,1100],[2000,800],[2100,600],[2200,900]];
-    for(const [tx,ty] of treeSpots) this.drawTree(g,tx,ty);
-
-    // Flowers
-    for(let i=0;i<80;i++){
-      const fx=Math.random()*WORLD_W, fy=Math.random()*WORLD_H;
-      const col=[0xff6688,0xffcc44,0xff88aa,0xcc44ff,0x44ccff][Math.floor(Math.random()*5)];
-      g.fillStyle(col,0.8); g.fillCircle(fx,fy,4);
-    }
-
-    // World border
-    g.lineStyle(6,0x2d1b4e,1); g.strokeRect(3,3,WORLD_W-6,WORLD_H-6);
-    g.lineStyle(3,0x7c3aed,0.5); g.strokeRect(6,6,WORLD_W-12,WORLD_H-12);
-
-    // Zone label texts
-    const labelStyle={fontSize:'22px',color:'#ffffffaa',stroke:'#000000',strokeThickness:4,alpha:0.5};
-    this.add.text(200,600,'🏠 Home',labelStyle).setOrigin(0.5);
-    this.add.text(1850,570,'💼 Work',labelStyle).setOrigin(0.5);
-    this.add.text(1200,1150,'🌳 Park',labelStyle).setOrigin(0.5);
-    this.add.text(550,1490,'☕ Café',labelStyle).setOrigin(0.5);
-    this.add.text(1810,1560,'★ The Venue',labelStyle).setOrigin(0.5);
-  }
-
-  drawBuilding(g, x,y,w,h,col,label,hasChimney) {
-    // Shadow
-    g.fillStyle(0x000000,0.25); g.fillRect(x+6,y+6,w,h);
-    // Wall
-    g.fillStyle(col); g.fillRect(x,y,w,h);
-    // Roof
-    g.fillStyle(this.adjustColor(col,-30));
-    g.fillTriangle(x-10,y, x+w/2,y-40, x+w+10,y);
-    // Door
-    g.fillStyle(0x4a3020); g.fillRect(x+w/2-12,y+h-40,24,40);
-    g.fillStyle(0x7a5030); g.fillRect(x+w/2-10,y+h-38,20,38);
-    // Windows
-    g.fillStyle(0x88ccff,0.7);
-    g.fillRect(x+15,y+25,30,25); g.fillRect(x+w-45,y+25,30,25);
-    if(h>120){ g.fillRect(x+15,y+75,30,25); g.fillRect(x+w-45,y+75,30,25); }
-    // Chimney
-    if(hasChimney){
-      g.fillStyle(0x6b4c3b); g.fillRect(x+w/2+20,y-50,18,30);
-    }
-    // Label
-    if(label){
-      this.add.text(x+w/2, y+h/2, label, {fontSize:'11px',color:'#ffffffcc',stroke:'#000',strokeThickness:2}).setOrigin(0.5);
-    }
-  }
-
-  drawTree(g, x,y) {
-    g.fillStyle(0x3d2b1a); g.fillRect(x-5,y-20,10,25);
-    g.fillStyle(0x2d7a3a,0.9); g.fillCircle(x,y-30,28);
-    g.fillStyle(0x3d9b4a,0.7); g.fillCircle(x-8,y-38,18);
-    g.fillStyle(0x3d9b4a,0.7); g.fillCircle(x+8,y-38,18);
-    g.fillStyle(0x55bb5a,0.5); g.fillCircle(x,y-44,14);
-  }
-
-  adjustColor(hex, amount) {
-    const r=Math.max(0,Math.min(255,((hex>>16)&0xff)+amount));
-    const g2=Math.max(0,Math.min(255,((hex>>8)&0xff)+amount));
-    const b=Math.max(0,Math.min(255,(hex&0xff)+amount));
-    return (r<<16)|(g2<<8)|b;
-  }
-
-  // ----------------------------------------------------------
-  // CHARACTER DRAWING (Animal Crossing style)
-  // ----------------------------------------------------------
-  drawAC(graphics, cfg, options={}) {
-    const { waving=false, sleeping=false } = options;
-    const { bodyColor, pantsColor, skinTone, hairColor, hairStyle='normal',
-            eyeColor=0x3d2b1f, mouthStyle='smile', isRobot=false,
-            hasFlames=false, hasZit=false } = cfg;
-
-    // Shadow
-    graphics.fillStyle(0x000000,0.2); graphics.fillEllipse(0,4,34,10);
-
-    // Shoes
-    graphics.fillStyle(isRobot?0x333333:0x333333);
-    graphics.fillRoundedRect(-14,-9,13,8,3);
-    graphics.fillRoundedRect(1,-9,13,8,3);
-
-    // Legs / pants
-    graphics.fillStyle(pantsColor);
-    graphics.fillRoundedRect(-12,-22,10,14,3);
-    graphics.fillRoundedRect(2,-22,10,14,3);
-
-    // Body
-    graphics.fillStyle(bodyColor);
-    graphics.fillRoundedRect(-13,-42,26,22,7);
-
-    // Arms
-    if(waving){
-      // Right arm raised
-      graphics.fillStyle(bodyColor);
-      graphics.fillRoundedRect(12,-55,10,18,5);
-      // Left arm normal
-      graphics.fillRoundedRect(-22,-41,10,16,5);
-      // Hands
-      graphics.fillStyle(skinTone);
-      graphics.fillCircle(-17,-26,5);
-      graphics.fillCircle(17,-48,5);
-    } else {
-      graphics.fillStyle(bodyColor);
-      graphics.fillRoundedRect(-22,-41,10,16,5);
-      graphics.fillRoundedRect(12,-41,10,16,5);
-      // Hands
-      graphics.fillStyle(skinTone);
-      graphics.fillCircle(-17,-26,5);
-      graphics.fillCircle(17,-26,5);
-    }
-
-    // Neck
-    graphics.fillStyle(skinTone); graphics.fillRect(-5,-44,10,6);
-
-    // Head (big round — AC proportions)
-    graphics.fillStyle(skinTone); graphics.fillCircle(0,-56,18);
-
-    // Hair
-    if(hairColor !== null && hairStyle !== 'none'){
-      graphics.fillStyle(hairColor);
-      if(hairStyle==='spiky'){
-        graphics.fillCircle(0,-62,14);
-        // Spikes
-        for(let i=-2;i<=2;i++){
-          const sx=i*6, sy=-72-Math.abs(i)*2;
-          graphics.fillTriangle(sx-4,-66,sx+4,-66,sx,sy);
-        }
-      } else if(hairStyle==='flat'){
-        graphics.fillCircle(0,-62,14);
-        graphics.fillRect(-18,-68,36,8);
-      } else if(hairStyle==='curly'){
-        graphics.fillCircle(0,-63,15);
-        for(let i=0;i<8;i++){
-          const a=i/8*Math.PI*2;
-          graphics.fillCircle(Math.cos(a)*12,Math.sin(a)*8-63,6);
-        }
-      } else if(hairStyle==='medium'){
-        graphics.fillCircle(0,-62,15);
-        graphics.fillRoundedRect(-16,-73,32,14,4);
-        // Side hair
-        graphics.fillRoundedRect(-19,-67,8,16,4);
-        graphics.fillRoundedRect(11,-67,8,16,4);
-      } else { // normal
-        graphics.fillCircle(0,-62,14);
-        graphics.fillRoundedRect(-15,-72,30,12,4);
-      }
-    } else if(isRobot) {
-      // Robot head details
-      graphics.lineStyle(2,0x90a4ae,1);
-      graphics.strokeRect(-14,-69,28,12);
-      graphics.fillStyle(0x90a4ae,0.3); graphics.fillRect(-14,-69,28,12);
-    }
-
-    // Eyes
-    if(sleeping){
-      graphics.lineStyle(2,0x3d2b1f,1);
-      graphics.beginPath(); graphics.arc(-7,-56,4,Math.PI,0); graphics.strokePath();
-      graphics.beginPath(); graphics.arc(7,-56,4,Math.PI,0); graphics.strokePath();
-    } else {
-      // Eye whites
-      graphics.fillStyle(0xffffff); graphics.fillEllipse(-7,-56,11,13); graphics.fillEllipse(7,-56,11,13);
-      // Pupils
-      graphics.fillStyle(eyeColor);
-      graphics.fillCircle(-6.5,-56,4); graphics.fillCircle(7.5,-56,4);
-      // Highlights
-      graphics.fillStyle(0xffffff,0.8);
-      graphics.fillCircle(-5,-54.5,1.5); graphics.fillCircle(9,-54.5,1.5);
-    }
-
-    // Nose
-    graphics.fillStyle(this.adjustColor(skinTone,-20),0.6);
-    graphics.fillCircle(0,-51,2);
-
-    // Mouth
-    if(!sleeping){
-      graphics.lineStyle(2,0x3d2b1f,1);
-      if(mouthStyle==='happy'||mouthStyle==='smile'){
-        graphics.beginPath(); graphics.arc(0,-46,5,0,Math.PI); graphics.strokePath();
-      } else if(mouthStyle==='weary'){
-        graphics.beginPath(); graphics.arc(0,-44,4,Math.PI,0); graphics.strokePath();
-      } else if(mouthStyle==='serious'){
-        graphics.fillStyle(0x3d2b1f); graphics.fillRect(-4,-46,8,2);
-      }
-    } else {
-      // ZZZ
-      graphics.fillStyle(0x9999ff,0.7);
-    }
-
-    // Special: zit
-    if(hasZit){
-      graphics.fillStyle(0xff6666); graphics.fillCircle(8,-62,3);
-      graphics.fillStyle(0xff9999); graphics.fillCircle(7.5,-62.5,1.5);
-    }
-
-    // Special: flames on head (Chris)
-    if(hasFlames){
-      graphics.fillStyle(0xff6600,0.8);
-      graphics.fillTriangle(-6,-72,-2,-86,2,-72);
-      graphics.fillTriangle(-2,-70,2,-82,6,-70);
-      graphics.fillStyle(0xff9900,0.7);
-      graphics.fillTriangle(-4,-70,0,-80,4,-70);
-      graphics.fillStyle(0xffcc00,0.5);
-      graphics.fillTriangle(-2,-70,0,-76,2,-70);
-    }
-
-    // Robot eye glow
-    if(isRobot){
-      graphics.fillStyle(eyeColor,0.15); graphics.fillCircle(-7,-56,9); graphics.fillCircle(7,-56,9);
-    }
-  }
-
-  drawPlayerAC(graphics) {
-    // Player is a yellow-shirt character
-    const cfg = { bodyColor:0xfce4ec, pantsColor:0x4a148c, skinTone:0xffd5b5,
-                  hairColor:0x4a3728, hairStyle:'medium', eyeColor:0x1565c0, mouthStyle:'smile' };
-    this.drawAC(graphics, cfg);
-    // Star on shirt
-    /* shirt star removed */
-  }
-
-  // ----------------------------------------------------------
-  // PLAYER
-  // ----------------------------------------------------------
-  createPlayer() {
-    this.player = {
-      x: 600, y: 500, speed: 180,
-      facing: 1, // 1=right, -1=left
-      moving: false,
-    };
-
-    this.playerGfx = this.add.graphics();
-    this.drawPlayerAC(this.playerGfx);
-    this.playerGfx.setDepth(500);
-
-    this.playerLabel = this.add.text(0,0,'YOU',{
-      fontSize:'11px',color:'#ffe082',stroke:'#000',strokeThickness:3,resolution:2
-    }).setOrigin(0.5,1).setDepth(501);
-  }
-
-  // ----------------------------------------------------------
-  // NPCs
-  // ----------------------------------------------------------
-  createNPCs() {
-    this.npcs = {};
-    const personaKeys = Object.keys(PERSONAS);
-    const zoneKeys = Object.keys(ZONES);
-
-    personaKeys.forEach((key, i) => {
-      const p = PERSONAS[key];
-      const startZone = ZONES.home[i] || ZONES.home[0];
-
-      const gfx = this.add.graphics();
-      gfx.setDepth(100);
-
-      const label = this.add.text(startZone.x, startZone.y - 72, p.name, {
-        fontSize:'11px', color:'#fff', stroke:'#000', strokeThickness:3, resolution:2
-      }).setOrigin(0.5,1).setDepth(102);
-
-      this.npcs[key] = {
-        key, p,
-        pos: { x: startZone.x, y: startZone.y },
-        targetPos: { x: startZone.x, y: startZone.y },
-        gfx, label,
-        facing: 1,
-        moving: false,
-        idle: false,
-        waitTimer: 0,
-        bubble: null,
-        animating: false,
-        currentAnim: null,
-        animTimer: 0,
-        zone: 'home',
-        lastAmbient: 0,
-        chatHistory: [],
-      };
-
-      // Draw initial character
-      gfx.x = startZone.x; gfx.y = startZone.y;
-      gfx.clear();
-      this.drawAC(gfx, p.vis);
-
-      this.conversationHistory[key] = [];
-    });
-  }
-
-  // ----------------------------------------------------------
-  // CAMERA
-  // ----------------------------------------------------------
-  setupCamera() {
-    this.cameras.main.setBounds(0,0,WORLD_W,WORLD_H);
-    this.cameras.main.setZoom(1.0);
-    this.cameras.main.startFollow(this.playerGfx, true, 0.1, 0.1);
-  }
-
-  // ----------------------------------------------------------
-  // CONTROLS
-  // ----------------------------------------------------------
-  setupControls() {
-    this.cursors = this.input.keyboard.addKeys({
-      up: Phaser.Input.Keyboard.KeyCodes.W,
-      down: Phaser.Input.Keyboard.KeyCodes.S,
-      left: Phaser.Input.Keyboard.KeyCodes.A,
-      right: Phaser.Input.Keyboard.KeyCodes.D,
-      upArrow: Phaser.Input.Keyboard.KeyCodes.UP,
-      downArrow: Phaser.Input.Keyboard.KeyCodes.DOWN,
-      leftArrow: Phaser.Input.Keyboard.KeyCodes.LEFT,
-      rightArrow: Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      interact: Phaser.Input.Keyboard.KeyCodes.E,
-      interact2: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    });
-  }
-
-  // ----------------------------------------------------------
-  // DIALOG UI
-  // ----------------------------------------------------------
-  setupDialogUI() {
-    const bar = document.getElementById('dialog-bar');
-    const input = document.getElementById('dialog-input');
-    const sendBtn = document.getElementById('dialog-send');
-    const closeBtn = document.getElementById('dialog-close');
-
-    sendBtn.onclick = () => this.sendMessage();
-    closeBtn.onclick = () => this.closeDialog();
-
-    input.addEventListener('keydown', e => {
-      e.stopPropagation();
-      if(e.key === 'Enter') this.sendMessage();
-    });
-    input.addEventListener('keyup', e => e.stopPropagation());
-    input.addEventListener('keypress', e => e.stopPropagation());
-  }
-
-  openDialog(npcKey) {
-    if(this.dialogOpen) return;
-    this.dialogOpen = true;
-    this.activePerson = npcKey;
-
-    const npc = this.npcs[npcKey];
-    const p = PERSONAS[npcKey];
-
-    // Stop NPC movement
-    npc.idle = true;
-    npc.targetPos = { x: npc.pos.x, y: npc.pos.y };
-
-    // Show portrait
-    this.drawPortraitCanvas(npcKey, p);
-
-    document.getElementById('dialog-name').textContent = p.name;
-    document.getElementById('dialog-text').textContent = '...';
-    document.getElementById('dialog-bar').style.display = 'flex';
-
-    // Initial greeting
-    this.callAI(npcKey, 'You just bumped into the player. Give a brief friendly greeting to kick off the conversation.', true);
-
-    // Resize game
-    this.scale.setGameSize(W, H - 160);
-    this.cameras.main.setViewport(0,0,W,H-160);
-
-    setTimeout(() => document.getElementById('dialog-input').focus(), 100);
-  }
-
-  drawPortraitCanvas(key, p) {
-    const canvas = document.getElementById('dialog-portrait-canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,80,80);
-
-    // Background
-    ctx.fillStyle = '#2d1b4e';
-    ctx.beginPath(); ctx.arc(40,40,38,0,Math.PI*2); ctx.fill();
-
-    // Draw mini character using 2D canvas
-    const vis = p.vis;
-    ctx.save(); ctx.translate(40,65);
-
-    // Body
-    ctx.fillStyle = '#'+vis.bodyColor.toString(16).padStart(6,'0');
-    this.ctx2dRoundRect(ctx,-9,-24,18,14,4); ctx.fill();
-
-    // Head
-    ctx.fillStyle = '#'+vis.skinTone.toString(16).padStart(6,'0');
-    ctx.beginPath(); ctx.arc(0,-32,12,0,Math.PI*2); ctx.fill();
-
-    // Hair
-    if(vis.hairColor && vis.hairStyle!=='none'){
-      ctx.fillStyle = '#'+vis.hairColor.toString(16).padStart(6,'0');
-      ctx.beginPath(); ctx.arc(0,-36,10,0,Math.PI*2); ctx.fill();
-    }
-
-    // Eyes
-    ctx.fillStyle='white'; ctx.beginPath(); ctx.ellipse(-4,-33,3.5,4,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='white'; ctx.beginPath(); ctx.ellipse(4,-33,3.5,4,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#'+vis.eyeColor.toString(16).padStart(6,'0');
-    ctx.beginPath(); ctx.arc(-4,-33,2.2,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(4,-33,2.2,0,Math.PI*2); ctx.fill();
-
-    ctx.restore();
-  }
-
-  ctx2dRoundRect(ctx,x,y,w,h,r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
-    ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-    ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
-    ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
-    ctx.closePath();
-  }
-
-  closeDialog() {
-    this.dialogOpen = false;
-    if(this.activePerson) {
-      this.npcs[this.activePerson].idle = false;
-      this.activePerson = null;
-    }
-    document.getElementById('dialog-bar').style.display = 'none';
-    document.getElementById('dialog-text').textContent = '';
-    document.getElementById('dialog-input').value = '';
-    this.scale.setGameSize(W, H);
-    this.cameras.main.setViewport(0,0,W,H);
-  }
-
-  async sendMessage() {
-    if(!this.activePerson || !this.dialogOpen) return;
-    const input = document.getElementById('dialog-input');
-    const msg = input.value.trim();
-    if(!msg) return;
-    input.value = '';
-    await this.callAI(this.activePerson, msg, false);
-  }
-
-  async callAI(npcKey, userMsg, isGreeting=false) {
-    const p = PERSONAS[npcKey];
-    const npc = this.npcs[npcKey];
-    const textEl = document.getElementById('dialog-text');
-    const thinkEl = document.getElementById('thinking-dot');
-    const sendBtn = document.getElementById('dialog-send');
-
-    thinkEl.style.display='inline'; sendBtn.disabled=true;
-
-    if(!isGreeting){
-      textEl.textContent += '\n\nYou: ' + userMsg;
-    }
-
-    const hist = this.conversationHistory[npcKey];
-    if(!isGreeting) hist.push({ role:'user', content: userMsg });
-
-    try {
-      const res = await fetch(WORKER, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          model:'claude-sonnet-4-6',
-          max_tokens:200,
-          system: p.system,
-          messages: isGreeting
-            ? [{ role:'user', content: userMsg }]
-            : hist
-        })
+  // hands
+  ctx.fillStyle=hex(cfg.skin);
+  ctx.beginPath(); ctx.arc(-17,-26,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(waving?17:-17,waving?-48:-26,5,0,Math.PI*2); ctx.fill();
+  // correct second hand
+  ctx.beginPath(); ctx.arc(17,waving?-48:-26,5,0,Math.PI*2); ctx.fill();
+
+  // neck
+  ctx.fillStyle=hex(cfg.skin); ctx.fillRect(-5,-44,10,6);
+
+  // head
+  ctx.fillStyle=hex(cfg.skin); ctx.beginPath(); ctx.arc(0,-56,18,0,Math.PI*2); ctx.fill();
+
+  // hair
+  if(cfg.hair && cfg.hstyle!=='none'){
+    ctx.fillStyle=hex(cfg.hair);
+    if(cfg.hstyle==='spiky'){
+      ctx.beginPath(); ctx.arc(0,-62,14,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=hex(cfg.hair);
+      [[-12,-68],[-6,-76],[0,-80],[6,-76],[12,-68]].forEach(([sx,sy])=>{
+        ctx.beginPath(); ctx.moveTo(sx-4,-66); ctx.lineTo(sx+4,-66); ctx.lineTo(sx,sy); ctx.closePath(); ctx.fill();
       });
-      const data = await res.json();
-      let reply = data?.content?.[0]?.text || '...';
-
-      // Parse action tags
-      const actionMatch = reply.match(/\[action:(\w+)\]/i);
-      if(actionMatch){
-        this.triggerNPCAnim(npcKey, actionMatch[1].toUpperCase());
-        reply = reply.replace(/\[action:\w+\]/gi,'').trim();
+    } else if(cfg.hstyle==='flat'){
+      ctx.beginPath(); ctx.arc(0,-62,14,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(-18,-70,36,9);
+    } else if(cfg.hstyle==='curly'){
+      ctx.beginPath(); ctx.arc(0,-63,15,0,Math.PI*2); ctx.fill();
+      for(let i=0;i<8;i++){
+        const a=i/8*Math.PI*2;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*11,-63+Math.sin(a)*8,6,0,Math.PI*2); ctx.fill();
       }
-
-      // Show reply with typewriter effect
-      const prefix = isGreeting ? '' : '\n\n' + p.name + ': ';
-      textEl.textContent += prefix;
-      await this.typewriterAppend(textEl, p.name + ': ' + reply);
-
-      // Keep history
-      if(!isGreeting) hist.push({ role:'assistant', content: reply });
-      if(hist.length > 20) hist.splice(0,2);
-
-      // Show bubble above character
-      this.showBubble(npc, reply.substring(0,80)+(reply.length>80?'...':''));
-
-    } catch(e) {
-      textEl.textContent += '\n\n[Connection issue]';
-    }
-    thinkEl.style.display='none'; sendBtn.disabled=false;
-  }
-
-  async typewriterAppend(el, text) {
-    for(const ch of text){
-      el.textContent += ch;
-      el.scrollTop = el.scrollHeight;
-      await new Promise(r=>setTimeout(r,18));
-    }
-  }
-
-  // ----------------------------------------------------------
-  // SPEECH BUBBLES
-  // ----------------------------------------------------------
-  showBubble(npc, text, color=0xfffef0) {
-    if(npc.bubble && npc.bubble.active) npc.bubble.destroy();
-
-    const container = this.add.container(npc.pos.x, npc.pos.y - 80);
-    container.setDepth(9999);
-
-    const txt = this.add.text(0,0, text, {
-      fontSize:'9px', color:'#111', wordWrap:{width:130},
-      align:'center', resolution:2
-    }).setOrigin(0.5, 1);
-
-    const bw = Math.max(txt.width+18, 40);
-    const bh = txt.height + 16;
-
-    const gfx = this.add.graphics();
-    gfx.fillStyle(color, 0.95);
-    gfx.lineStyle(1.5, 0x888866, 0.7);
-    gfx.fillRoundedRect(-bw/2, -bh-4, bw, bh, 7);
-    gfx.strokeRoundedRect(-bw/2, -bh-4, bw, bh, 7);
-    // Tail
-    gfx.fillStyle(color, 0.95);
-    gfx.fillTriangle(-5,-4, 5,-4, 0,4);
-
-    txt.setPosition(0, -4);
-    container.add([gfx, txt]);
-    npc.bubble = container;
-
-    this.time.delayedCall(4500, () => {
-      if(container.active){
-        this.tweens.add({ targets:container, alpha:0, duration:400,
-          onComplete:()=>{ if(container.active) container.destroy(); }});
-      }
-    });
-  }
-
-  // ----------------------------------------------------------
-  // NPC ANIMATIONS
-  // ----------------------------------------------------------
-  triggerNPCAnim(npcKey, animName) {
-    const npc = this.npcs[npcKey];
-    if(npc.animating) return;
-    npc.animating = true;
-    npc.currentAnim = animName;
-    npc.animTimer = 0;
-
-    const origX = npc.pos.x, origY = npc.pos.y;
-
-    if(animName==='JUMP'){
-      this.tweens.add({ targets:npc.pos, y:origY-40, duration:250, yoyo:true, repeat:2,
-        onComplete:()=>{ npc.pos.y=origY; npc.animating=false; }});
-    } else if(animName==='SPIN'){
-      this.tweens.add({ targets:npc.gfx, angle:360, duration:800,
-        onComplete:()=>{ npc.gfx.angle=0; npc.animating=false; }});
-    } else if(animName==='WAVE'){
-      npc.waving=true;
-      this.time.delayedCall(2000,()=>{ npc.waving=false; npc.animating=false; });
-    } else if(animName==='DANCE'){
-      this.tweens.add({ targets:npc.pos, y:origY-20, duration:200, yoyo:true, repeat:5,
-        onComplete:()=>{ npc.pos.y=origY; npc.animating=false; }});
-      this.tweens.add({ targets:npc.gfx, angle:15, duration:200, yoyo:true, repeat:5,
-        onComplete:()=>{ npc.gfx.angle=0; }});
-    } else if(animName==='NOD'){
-      this.tweens.add({ targets:npc.gfx, scaleY:0.92, duration:150, yoyo:true, repeat:3,
-        onComplete:()=>{ npc.gfx.scaleY=1; npc.animating=false; }});
-    } else if(animName==='SHAKE'){
-      this.tweens.add({ targets:npc.pos, x:origX+8, duration:80, yoyo:true, repeat:5,
-        onComplete:()=>{ npc.pos.x=origX; npc.animating=false; }});
+    } else if(cfg.hstyle==='medium'){
+      ctx.beginPath(); ctx.arc(0,-62,15,0,Math.PI*2); ctx.fill();
+      roundRect(ctx,-16,-74,32,14,4); ctx.fill();
+      roundRect(ctx,-20,-68,8,18,4); ctx.fill();
+      roundRect(ctx,12,-68,8,18,4); ctx.fill();
     } else {
-      this.time.delayedCall(1000,()=>{ npc.animating=false; });
+      ctx.beginPath(); ctx.arc(0,-62,14,0,Math.PI*2); ctx.fill();
+      roundRect(ctx,-16,-73,32,13,4); ctx.fill();
+    }
+  } else if(cfg.robot){
+    ctx.strokeStyle='#90a4ae'; ctx.lineWidth=1.5; ctx.strokeRect(-14,-70,28,13);
+    ctx.fillStyle='rgba(144,164,174,0.25)'; ctx.fillRect(-14,-70,28,13);
+  }
+
+  // eyes
+  if(sleeping){
+    ctx.strokeStyle='#3d2b1f'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(-7,-56,4,Math.PI,0,true); ctx.stroke();
+    ctx.beginPath(); ctx.arc(7,-56,4,Math.PI,0,true); ctx.stroke();
+  } else {
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.ellipse(-7,-56,5.5,6.5,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(7,-56,5.5,6.5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=hex(cfg.eye);
+    ctx.beginPath(); ctx.arc(-7,-56,3.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7,-56,3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(-5.5,-54.5,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8.5,-54.5,1.5,0,Math.PI*2); ctx.fill();
+    if(cfg.robot){
+      ctx.fillStyle='rgba(255,26,0,0.15)';
+      ctx.beginPath(); ctx.arc(-7,-56,9,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(7,-56,9,0,Math.PI*2); ctx.fill();
     }
   }
 
-  // ----------------------------------------------------------
-  // AMBIENT NPC CHAT
-  // ----------------------------------------------------------
-  setupAmbientChat() {
-    this.time.addEvent({
-      delay: 28000, loop: true,
-      callback: this.checkAmbientConversations, callbackScope: this
-    });
-  }
+  // nose
+  ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.arc(0,-51,2,0,Math.PI*2); ctx.fill();
 
-  async checkAmbientConversations() {
-    if(this.dialogOpen) return;
-    const keys = Object.keys(this.npcs);
-    for(let i=0;i<keys.length;i++){
-      for(let j=i+1;j<keys.length;j++){
-        const a = this.npcs[keys[i]], b = this.npcs[keys[j]];
-        const dist = Phaser.Math.Distance.Between(a.pos.x,a.pos.y,b.pos.x,b.pos.y);
-        if(dist < 160 && !a.animating && !b.animating){
-          const now = Date.now();
-          if(now - (a.lastAmbient||0) > 60000 && now - (b.lastAmbient||0) > 60000){
-            a.lastAmbient = b.lastAmbient = now;
-            this.runAmbientExchange(keys[i], keys[j]);
-            return; // one pair at a time
-          }
-        }
-      }
-    }
-  }
-
-  async runAmbientExchange(keyA, keyB) {
-    const pa = PERSONAS[keyA], pb = PERSONAS[keyB];
-    const na = this.npcs[keyA], nb = this.npcs[keyB];
-    const opener = AMBIENT_OPENERS[Math.floor(Math.random()*AMBIENT_OPENERS.length)];
-
-    // A says something
-    try {
-      const resA = await fetch(WORKER, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:50,
-          system: pa.system,
-          messages:[{ role:'user', content:`Say something brief to ${pb.name} while you're both out in Cashworld. One sentence. No action tags.` }]
-        })
-      });
-      const dataA = await resA.json();
-      const lineA = dataA?.content?.[0]?.text?.replace(/\[action:\w+\]/gi,'').trim() || '...';
-      this.showBubble(na, lineA);
-
-      // B responds after a pause
-      await new Promise(r=>setTimeout(r,3500));
-      const resB = await fetch(WORKER, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:50,
-          system: pb.system,
-          messages:[
-            { role:'user', content:`${pa.name} just said to you: "${lineA}". Reply briefly — one sentence only. You two are just hanging out in Cashworld.` }
-          ]
-        })
-      });
-      const dataB = await resB.json();
-      const lineB = dataB?.content?.[0]?.text?.replace(/\[action:\w+\]/gi,'').trim() || '...';
-      this.showBubble(nb, lineB);
-    } catch(e) {}
-  }
-
-  // ----------------------------------------------------------
-  // SCHEDULE
-  // ----------------------------------------------------------
-  updateNPCSchedules() {
-    const now = new Date().toLocaleString('en-US',{ timeZone:'America/New_York' });
-    const etDate = new Date(now);
-    const hour = etDate.getHours();
-
-    Object.keys(this.npcs).forEach(key => {
-      const schedule = SCHEDULE[key];
-      const slot = schedule.find(s => hour >= s.start && hour < s.end) || schedule[0];
-      const npc = this.npcs[key];
-      if(npc.zone !== slot.zone && !this.dialogOpen){
-        npc.zone = slot.zone;
-        const zoneTargets = ZONES[slot.zone];
-        const target = zoneTargets[Object.keys(this.npcs).indexOf(key) % zoneTargets.length];
-        npc.targetPos = { x:target.x, y:target.y };
-      }
-    });
-  }
-
-  updateClock() {
-    const now = new Date().toLocaleString('en-US',{
-      timeZone:'America/New_York', hour:'numeric', minute:'2-digit', hour12:true
-    });
-    document.getElementById('clock-time').textContent = now + ' ET';
-  }
-
-  // ----------------------------------------------------------
-  // MINIMAP
-  // ----------------------------------------------------------
-  setupMinimap() {
-    this.minimapCtx = document.getElementById('minimap-canvas2').getContext('2d');
-  }
-
-  updateMinimap() {
-    const ctx = this.minimapCtx;
-    const mw=120, mh=90;
-    const sx=mw/WORLD_W, sy=mh/WORLD_H;
-    ctx.clearRect(0,0,mw,mh);
-
-    // Background
-    ctx.fillStyle='#2a4a3a'; ctx.fillRect(0,0,mw,mh);
-
-    // Roads
-    ctx.fillStyle='#555566';
-    ctx.fillRect(0,840*sy,mw,80*sy);
-    ctx.fillRect(1100*sx,0,80*sx,mh);
-
-    // Zones
-    const zones2d=[
-      {x:100,y:80,w:300,h:300,col:'#5e7a4a'},
-      {x:1650,y:80,w:380,h:300,col:'#546e7a'},
-      {x:1100,y:800,w:260,h:260,col:'#4a7a5e'},
-      {x:450,y:1300,w:200,h:200,col:'#a08050'},
-      {x:1650,y:1280,w:320,h:260,col:'#4a1560'},
-    ];
-    for(const z of zones2d){
-      ctx.fillStyle=z.col+'99'; ctx.fillRect(z.x*sx,z.y*sy,z.w*sx,z.h*sy);
-    }
-
-    // NPCs
-    Object.keys(this.npcs).forEach(key=>{
-      const n=this.npcs[key];
-      ctx.fillStyle=PERSONAS[key].color;
-      ctx.beginPath(); ctx.arc(n.pos.x*sx,n.pos.y*sy,3,0,Math.PI*2); ctx.fill();
-    });
-
-    // Player
-    ctx.fillStyle='#ffe082';
-    ctx.beginPath(); ctx.arc(this.player.x*sx,this.player.y*sy,4,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
-  }
-
-  // ----------------------------------------------------------
-  // UPDATE LOOP
-  // ----------------------------------------------------------
-  update(time, delta) {
-    const dt = delta/1000;
-    if(!this.dialogOpen) this.handlePlayerMovement(dt);
-    this.updateNPCMovement(dt);
-    this.updateGraphics();
-    this.checkPlayerNPCInteraction();
-    this.updateMinimap();
-  }
-
-  handlePlayerMovement(dt) {
-    const c = this.cursors;
-    let vx=0, vy=0;
-    if(c.left.isDown||c.leftArrow.isDown) vx=-1;
-    if(c.right.isDown||c.rightArrow.isDown) vx=1;
-    if(c.up.isDown||c.upArrow.isDown) vy=-1;
-    if(c.down.isDown||c.downArrow.isDown) vy=1;
-
-    if(vx!==0&&vy!==0){ vx*=0.707; vy*=0.707; }
-
-    this.player.x = Phaser.Math.Clamp(this.player.x + vx*this.player.speed*dt, 10, WORLD_W-10);
-    this.player.y = Phaser.Math.Clamp(this.player.y + vy*this.player.speed*dt, 10, WORLD_H-10);
-    this.player.moving = vx!==0||vy!==0;
-    if(vx!==0) this.player.facing = vx>0?1:-1;
-  }
-
-  updateNPCMovement(dt) {
-    const speed = 60;
-    Object.keys(this.npcs).forEach(key=>{
-      const npc = this.npcs[key];
-      if(npc.idle || this.dialogOpen && this.activePerson===key) return;
-
-      const dx = npc.targetPos.x - npc.pos.x;
-      const dy = npc.targetPos.y - npc.pos.y;
-      const dist = Math.sqrt(dx*dx+dy*dy);
-
-      if(dist < 8){
-        npc.moving = false;
-        // Wander: pick new target near zone
-        if(npc.waitTimer <= 0){
-          const zoneTargets = ZONES[npc.zone] || ZONES.home;
-          const base = zoneTargets[Object.keys(this.npcs).indexOf(key) % zoneTargets.length];
-          npc.targetPos = {
-            x: base.x + (Math.random()-0.5)*120,
-            y: base.y + (Math.random()-0.5)*120
-          };
-          npc.targetPos.x = Phaser.Math.Clamp(npc.targetPos.x, 30, WORLD_W-30);
-          npc.targetPos.y = Phaser.Math.Clamp(npc.targetPos.y, 30, WORLD_H-30);
-          npc.waitTimer = 2 + Math.random()*4;
-        } else {
-          npc.waitTimer -= dt;
-        }
-      } else {
-        npc.moving = true;
-        const nx = dx/dist, ny = dy/dist;
-        npc.pos.x += nx*speed*dt;
-        npc.pos.y += ny*speed*dt;
-        if(dx!==0) npc.facing = dx>0?1:-1;
-      }
-    });
-  }
-
-  updateGraphics() {
-    // Player
-    this.playerGfx.x = this.player.x;
-    this.playerGfx.y = this.player.y;
-    this.playerGfx.setScaleX(this.player.facing);
-    this.playerGfx.setDepth(this.player.y + 500);
-    this.playerLabel.setPosition(this.player.x, this.player.y - 74);
-    this.playerLabel.setDepth(this.player.y + 501);
-
-    // NPCs
-    Object.keys(this.npcs).forEach(key=>{
-      const npc = this.npcs[key];
-      npc.gfx.x = npc.pos.x;
-      npc.gfx.y = npc.pos.y;
-      npc.gfx.setScaleX(npc.facing);
-      npc.gfx.setDepth(npc.pos.y + 100);
-
-      // Redraw if waving state changed
-      npc.gfx.clear();
-      this.drawAC(npc.gfx, PERSONAS[key].vis, { waving: npc.waving });
-
-      // Name label (outside container, never flips)
-      npc.label.setPosition(npc.pos.x, npc.pos.y - 78);
-      npc.label.setDepth(npc.pos.y + 102);
-
-      // Update bubble position
-      if(npc.bubble && npc.bubble.active){
-        npc.bubble.setPosition(npc.pos.x, npc.pos.y - 90);
-      }
-    });
-  }
-
-  checkPlayerNPCInteraction() {
-    if(this.dialogOpen) return;
-    const interact = Phaser.Input.Keyboard.JustDown(this.cursors.interact) ||
-                     Phaser.Input.Keyboard.JustDown(this.cursors.interact2);
-    let closestKey = null, closestDist = 90;
-
-    Object.keys(this.npcs).forEach(key=>{
-      const npc = this.npcs[key];
-      const dist = Phaser.Math.Distance.Between(this.player.x,this.player.y,npc.pos.x,npc.pos.y);
-      if(dist < closestDist){ closestDist=dist; closestKey=key; }
-    });
-
-    if(closestKey) {
-      // Show "press E" hint bubble above NPC
-      const npc = this.npcs[closestKey];
-      if(!npc._hintShown){
-        npc._hintShown=true;
-        this.showBubble(npc,'Press E or SPACE to chat', 0xe8f5e9);
-      }
-      if(interact) this.openDialog(closestKey);
+  // mouth
+  if(!sleeping){
+    ctx.strokeStyle='#3d2b1f'; ctx.lineWidth=1.8;
+    if(cfg.mouth==='happy'||cfg.mouth==='smile'){
+      ctx.beginPath(); ctx.arc(0,-47,5,0,Math.PI); ctx.stroke();
+    } else if(cfg.mouth==='weary'){
+      ctx.beginPath(); ctx.arc(0,-44,4,Math.PI,0); ctx.stroke();
     } else {
-      // Clear all hints
-      Object.keys(this.npcs).forEach(k=>{ this.npcs[k]._hintShown=false; });
+      ctx.fillStyle='#3d2b1f'; ctx.fillRect(-4,-46,8,2);
+    }
+  }
+
+  // zit
+  if(cfg.zit){
+    ctx.fillStyle='#ff6666'; ctx.beginPath(); ctx.arc(8,-63,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ffaaaa'; ctx.beginPath(); ctx.arc(7.2,-63.5,1.4,0,Math.PI*2); ctx.fill();
+  }
+
+  // flames
+  if(cfg.flames){
+    ctx.fillStyle='rgba(255,102,0,0.85)';
+    ctx.beginPath(); ctx.moveTo(-6,-73); ctx.lineTo(-2,-87); ctx.lineTo(2,-73); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-2,-71); ctx.lineTo(2,-83); ctx.lineTo(6,-71); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,200,0,0.6)';
+    ctx.beginPath(); ctx.moveTo(-2,-71); ctx.lineTo(0,-78); ctx.lineTo(2,-71); ctx.closePath(); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// Draw player character (distinct look)
+function drawPlayer(ctx, flipX=false){
+  drawChar(ctx, {body:'#fce4ec',pants:'#4a148c',skin:'#ffd5b5',hair:'#4a3728',hstyle:'medium',eye:'#1565c0',mouth:'smile'}, {flipX});
+  // little star badge
+  ctx.save(); ctx.scale(flipX?-1:1,1);
+  ctx.fillStyle='#f06292';
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5-Math.PI/2;
+    const b=a+Math.PI/5;
+    if(i===0) ctx.moveTo(Math.cos(a)*5,-33+Math.sin(a)*5);
+    else ctx.lineTo(Math.cos(a)*5,-33+Math.sin(a)*5);
+    ctx.lineTo(Math.cos(b)*2,-33+Math.sin(b)*2);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ─── WORLD RENDERING ───────────────────────────────────────
+let worldCanvas, worldCtx;
+
+function buildWorld(){
+  worldCanvas = document.createElement('canvas');
+  worldCanvas.width=WW; worldCanvas.height=WH;
+  const ctx=worldCanvas.getContext('2d');
+
+  // grass
+  ctx.fillStyle='#4a7c59'; ctx.fillRect(0,0,WW,WH);
+  // grass variation
+  for(let i=0;i<100;i++){
+    ctx.fillStyle=Math.random()<0.5?'rgba(61,107,74,0.4)':'rgba(83,122,94,0.3)';
+    ctx.beginPath(); ctx.arc(Math.random()*WW,Math.random()*WH,20+Math.random()*60,0,Math.PI*2); ctx.fill();
+  }
+
+  // roads
+  ctx.fillStyle='#555566'; ctx.fillRect(0,840,WW,80);
+  ctx.fillStyle='#666677'; ctx.fillRect(0,852,WW,56);
+  ctx.fillStyle='rgba(255,238,85,0.7)';
+  for(let x=0;x<WW;x+=120){ ctx.fillRect(x,878,60,4); }
+
+  ctx.fillStyle='#555566'; ctx.fillRect(1100,0,80,WH);
+  ctx.fillStyle='#666677'; ctx.fillRect(1112,0,56,WH);
+  ctx.fillStyle='rgba(255,238,85,0.7)';
+  for(let y=0;y<WH;y+=120){ ctx.fillRect(1128,y,4,60); }
+
+  // sidewalks
+  ctx.fillStyle='rgba(180,180,200,0.75)';
+  ctx.fillRect(0,820,WW,20); ctx.fillRect(0,920,WW,20);
+  ctx.fillRect(1080,0,20,WH); ctx.fillRect(1180,0,20,WH);
+
+  // buildings
+  drawBldg(ctx,100,80,190,160,'#8b5e3c','🏠 Home',true);
+  drawBldg(ctx,320,70,150,140,'#7a8c5e','',true);
+  drawBldg(ctx,80,270,140,130,'#5e7a8c','',true);
+  drawBldg(ctx,1650,80,290,230,'#546e7a','💼 CASHNET HQ',false);
+  drawBldg(ctx,1970,110,160,180,'#607d8b','',false);
+  drawBldg(ctx,1690,340,200,150,'#78909c','',false);
+  drawBldg(ctx,450,1300,210,170,'#d4a574','☕ CAFÉ',false);
+  drawBldg(ctx,1650,1280,330,260,'#4a1560','★ THE VENUE',false);
+
+  // neon venue border
+  ctx.strokeStyle='rgba(255,0,255,0.5)'; ctx.lineWidth=3; ctx.strokeRect(1650,1280,330,260);
+  ctx.strokeStyle='rgba(0,255,255,0.3)'; ctx.lineWidth=2; ctx.strokeRect(1658,1288,314,244);
+
+  // park
+  ctx.fillStyle='#5d9e6d'; ctx.beginPath(); ctx.arc(1210,910,230,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#4a8a5a'; ctx.beginPath(); ctx.arc(1210,910,190,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(68,153,187,0.8)'; ctx.beginPath(); ctx.ellipse(1210,910,75,55,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(85,170,204,0.4)'; ctx.beginPath(); ctx.ellipse(1210,906,60,42,0,0,Math.PI*2); ctx.fill();
+
+  // trees
+  const trees=[[1060,790],[1360,790],[1030,1010],[1390,1010],[1210,770],[1210,1050],
+    [300,600],[500,400],[700,700],[900,500],[1500,610],[1620,410],[400,1110],[800,1210],
+    [1510,1110],[2010,810],[2110,620],[2210,910]];
+  trees.forEach(([tx,ty])=>drawTree(ctx,tx,ty));
+
+  // flowers
+  const fcols=['#ff6688','#ffcc44','#ff88aa','#cc44ff','#44ccff'];
+  for(let i=0;i<80;i++){
+    ctx.fillStyle=fcols[Math.floor(Math.random()*fcols.length)];
+    ctx.globalAlpha=0.75;
+    ctx.beginPath(); ctx.arc(Math.random()*WW,Math.random()*WH,3.5,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // zone labels (faint)
+  ctx.font='bold 20px Courier New'; ctx.textAlign='center'; ctx.globalAlpha=0.35;
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=3;
+  [['🏠 Homes',230,620],['💼 Work District',1850,580],['🌳 Park',1210,1160],['☕ Café',560,1510],['★ The Venue',1820,1570]].forEach(([t,x,y])=>{
+    ctx.strokeText(t,x,y); ctx.fillText(t,x,y);
+  });
+  ctx.globalAlpha=1;
+
+  // world border
+  ctx.strokeStyle='#2d1b4e'; ctx.lineWidth=8; ctx.strokeRect(4,4,WW-8,WH-8);
+  ctx.strokeStyle='rgba(124,58,237,0.4)'; ctx.lineWidth=3; ctx.strokeRect(8,8,WW-16,WH-16);
+}
+
+function drawBldg(ctx,x,y,w,h,col,label,chimney){
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(x+6,y+6,w,h);
+  ctx.fillStyle=col; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=adjustColor(parseInt(col.slice(1),16),-35);
+  ctx.beginPath(); ctx.moveTo(x-10,y); ctx.lineTo(x+w/2,y-42); ctx.lineTo(x+w+10,y); ctx.closePath(); ctx.fill();
+  // door
+  ctx.fillStyle='#4a3020'; roundRect(ctx,x+w/2-13,y+h-42,26,42,3); ctx.fill();
+  ctx.fillStyle='#7a5030'; roundRect(ctx,x+w/2-11,y+h-40,22,40,2); ctx.fill();
+  // windows
+  ctx.fillStyle='rgba(136,204,255,0.7)';
+  roundRect(ctx,x+14,y+24,30,26,3); ctx.fill();
+  roundRect(ctx,x+w-44,y+24,30,26,3); ctx.fill();
+  if(h>130){ roundRect(ctx,x+14,y+74,30,26,3); ctx.fill(); roundRect(ctx,x+w-44,y+74,30,26,3); ctx.fill(); }
+  if(chimney){ ctx.fillStyle='#6b4c3b'; ctx.fillRect(x+w/2+18,y-52,18,32); }
+  if(label){
+    ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
+    ctx.strokeText(label,x+w/2,y+h/2+5); ctx.fillText(label,x+w/2,y+h/2+5);
+  }
+}
+
+function drawTree(ctx,x,y){
+  ctx.fillStyle='#3d2b1a'; ctx.fillRect(x-5,y-22,10,26);
+  ctx.fillStyle='rgba(45,122,58,0.9)'; ctx.beginPath(); ctx.arc(x,y-32,28,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(61,155,74,0.7)'; ctx.beginPath(); ctx.arc(x-8,y-40,18,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+8,y-40,18,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(85,187,90,0.5)'; ctx.beginPath(); ctx.arc(x,y-46,13,0,Math.PI*2); ctx.fill();
+}
+
+// ─── GAME STATE ────────────────────────────────────────────
+const keys={};
+window.addEventListener('keydown',e=>{ if(!state.dialogOpen) keys[e.key]=true; if(e.key==='e'||e.key==='E') tryInteract(); });
+window.addEventListener('keyup',e=>{ keys[e.key]=false; });
+
+const player={ x:600,y:500,speed:180,facing:1,bobOffset:0 };
+const cam={ x:0,y:0 };
+
+const PKEYS = Object.keys(PERSONAS);
+const npcs = {};
+PKEYS.forEach((k,i)=>{
+  const z=ZONES.home[i];
+  npcs[k]={
+    x:z.x,y:z.y,
+    tx:z.x,ty:z.y,
+    facing:1,
+    zone:'home',
+    waitTimer:2+Math.random()*3,
+    bubble:null, // {text,alpha,timer}
+    waving:false,
+    animType:null,
+    animTimer:0,
+    animOY:0, // original Y for jump
+    animAngle:0,
+    chatHistory:[],
+    lastAmbient:0,
+  };
+});
+
+const state={ dialogOpen:false, activeNPC:null, nearNPC:null };
+
+// ─── DIALOG UI ─────────────────────────────────────────────
+const dlg=document.getElementById('dialog');
+const dinput=document.getElementById('dinput');
+const dtext=document.getElementById('dtext');
+const dsend=document.getElementById('dsend');
+const dclose=document.getElementById('dclose');
+const thinking=document.getElementById('thinking');
+
+dinput.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter')sendMsg(); });
+dinput.addEventListener('keyup',e=>e.stopPropagation());
+dsend.onclick=()=>sendMsg();
+dclose.onclick=()=>closeDialog();
+
+function openDialog(k){
+  if(state.dialogOpen)return;
+  state.dialogOpen=true;
+  state.activeNPC=k;
+  npcs[k].tx=npcs[k].x; npcs[k].ty=npcs[k].y; // freeze
+  document.getElementById('dname').textContent=PERSONAS[k].name;
+  drawPortrait(k);
+  dtext.textContent='';
+  dlg.style.display='block';
+  callAI(k,'You just bumped into the player. Brief friendly greeting to start.',true);
+  setTimeout(()=>dinput.focus(),80);
+}
+
+function closeDialog(){
+  state.dialogOpen=false;
+  state.activeNPC=null;
+  dlg.style.display='none';
+  dtext.textContent='';
+  dinput.value='';
+}
+
+async function sendMsg(){
+  if(!state.activeNPC)return;
+  const msg=dinput.value.trim(); if(!msg)return;
+  dinput.value='';
+  await callAI(state.activeNPC,msg,false);
+}
+
+async function callAI(k,msg,greeting){
+  const p=PERSONAS[k]; const npc=npcs[k];
+  thinking.style.display='inline'; dsend.disabled=true;
+  if(!greeting) dtext.textContent+='\n\nYou: '+msg;
+  const hist=npc.chatHistory;
+  if(!greeting) hist.push({role:'user',content:msg});
+  try{
+    const r=await fetch(WORKER,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,system:p.sys,
+        messages:greeting?[{role:'user',content:msg}]:hist})});
+    const d=await r.json();
+    let reply=d?.content?.[0]?.text||'...';
+    const am=reply.match(/\[action:(\w+)\]/i);
+    if(am){ triggerAnim(k,am[1].toUpperCase()); reply=reply.replace(/\[action:\w+\]/gi,'').trim(); }
+    if(!greeting) hist.push({role:'assistant',content:reply});
+    if(hist.length>20) hist.splice(0,2);
+    const prefix=greeting?p.name+': ':'\n\n'+p.name+': ';
+    dtext.textContent+=prefix;
+    for(const ch of reply){ dtext.textContent+=ch; dtext.scrollTop=dtext.scrollHeight; await sleep(16); }
+    showBubble(k,reply.slice(0,90)+(reply.length>90?'…':''));
+  }catch(e){ dtext.textContent+='\n\n[Connection issue]'; }
+  thinking.style.display='none'; dsend.disabled=false;
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function drawPortrait(k){
+  const pc=document.getElementById('portrait'); const c=pc.getContext('2d');
+  c.clearRect(0,0,80,80);
+  c.fillStyle='#2d1b4e'; c.beginPath(); c.arc(40,40,38,0,Math.PI*2); c.fill();
+  c.save(); c.beginPath(); c.arc(40,40,37,0,Math.PI*2); c.clip();
+  c.translate(40,72); c.scale(0.62,0.62);
+  drawChar(c,PERSONAS[k].body);
+  c.restore();
+}
+
+// ─── BUBBLES ───────────────────────────────────────────────
+function showBubble(k,text){ npcs[k].bubble={text,alpha:1,timer:4500}; }
+
+// ─── ANIMATIONS ────────────────────────────────────────────
+function triggerAnim(k,type){
+  const n=npcs[k];
+  n.animType=type; n.animTimer=0; n.animAngle=0;
+  n.animOY=n.y; n.waving=false;
+  if(type==='WAVE'){n.waving=true; setTimeout(()=>{n.waving=false;n.animType=null;},2000);}
+}
+
+function updateAnim(k,dt){
+  const n=npcs[k];
+  if(!n.animType)return;
+  n.animTimer+=dt;
+  const t=n.animTimer;
+  if(n.animType==='JUMP'){
+    const prog=(t%0.5)/0.5;
+    n.y=n.animOY-Math.sin(prog*Math.PI)*40;
+    if(t>1.5){n.y=n.animOY;n.animType=null;}
+  } else if(n.animType==='SPIN'){
+    n.animAngle=t*360;
+    if(t>0.9){n.animAngle=0;n.animType=null;}
+  } else if(n.animType==='DANCE'){
+    n.y=n.animOY-Math.abs(Math.sin(t*10))*20;
+    n.animAngle=Math.sin(t*10)*15;
+    if(t>1.5){n.y=n.animOY;n.animAngle=0;n.animType=null;}
+  } else if(n.animType==='NOD'){
+    n.animAngle=Math.sin(t*15)*12;
+    if(t>1){n.animAngle=0;n.animType=null;}
+  } else if(n.animType==='SHAKE'){
+    n.x=n.tx+(Math.sin(t*30)*8);
+    if(t>1){n.x=n.tx;n.animType=null;}
+  }
+}
+
+// ─── AMBIENT CHAT ──────────────────────────────────────────
+setInterval(checkAmbient,30000);
+async function checkAmbient(){
+  if(state.dialogOpen)return;
+  const ks=PKEYS;
+  for(let i=0;i<ks.length;i++) for(let j=i+1;j<ks.length;j++){
+    const a=npcs[ks[i]],b=npcs[ks[j]];
+    const dx=a.x-b.x,dy=a.y-b.y;
+    if(dx*dx+dy*dy<160*160){
+      const now=Date.now();
+      if(now-a.lastAmbient>90000&&now-b.lastAmbient>90000){
+        a.lastAmbient=b.lastAmbient=now;
+        runAmbient(ks[i],ks[j]); return;
+      }
     }
   }
 }
 
-// ============================================================
-// BOOT
-// ============================================================
-const config = {
-  type: Phaser.AUTO,
-  width: W, height: H,
-  parent: 'game-container',
-  backgroundColor: '#4a7c59',
-  scene: [GameScene],
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  }
-};
+async function runAmbient(ka,kb){
+  const pa=PERSONAS[ka],pb=PERSONAS[kb];
+  const opener=AMBIENT[Math.floor(Math.random()*AMBIENT.length)];
+  try{
+    const ra=await fetch(WORKER,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:50,system:pa.sys,
+        messages:[{role:'user',content:`Say something brief (one sentence, no action tags) to ${pb.name} while hanging out in Cashworld.`}]})});
+    const da=await ra.json();
+    const la=(da?.content?.[0]?.text||'').replace(/\[action:\w+\]/gi,'').trim();
+    if(la) showBubble(ka,la);
+    await sleep(3500);
+    const rb=await fetch(WORKER,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:50,system:pb.sys,
+        messages:[{role:'user',content:`${pa.name} said: "${la}". Reply in one sentence, no action tags.`}]})});
+    const db=await rb.json();
+    const lb=(db?.content?.[0]?.text||'').replace(/\[action:\w+\]/gi,'').trim();
+    if(lb) showBubble(kb,lb);
+  }catch(e){}
+}
 
-window.addEventListener('load', () => {
-  new Phaser.Game(config);
-});
+// ─── SCHEDULE ──────────────────────────────────────────────
+function getET(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})); }
+function updateSchedule(){
+  const h=getET().getHours();
+  PKEYS.forEach((k,i)=>{
+    const sched=SCHEDULE[k];
+    const slot=sched.find(s=>h>=s.s&&h<s.e)||sched[0];
+    const n=npcs[k];
+    if(n.zone!==slot.z&&!state.dialogOpen){
+      n.zone=slot.z;
+      const tgts=ZONES[slot.z];
+      const tgt=tgts[i%tgts.length];
+      n.tx=tgt.x; n.ty=tgt.y;
+    }
+  });
+}
+updateSchedule();
+setInterval(updateSchedule,60000);
+
+// clock
+function updateClock(){
+  const s=getET().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  document.getElementById('ctime').textContent=s+' ET';
+}
+updateClock(); setInterval(updateClock,30000);
+
+// ─── INTERACTION ───────────────────────────────────────────
+function tryInteract(){
+  if(state.dialogOpen){closeDialog();return;}
+  if(state.nearNPC) openDialog(state.nearNPC);
+}
+
+// ─── MAIN LOOP ─────────────────────────────────────────────
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+const mmc=document.getElementById('minimap');
+const mmx=mmc.getContext('2d');
+
+buildWorld();
+
+let last=0;
+function loop(ts){
+  const dt=Math.min((ts-last)/1000,0.05); last=ts;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(t=>{last=t;requestAnimationFrame(loop);});
+
+function update(dt){
+  if(!state.dialogOpen){
+    let vx=0,vy=0;
+    if(keys['a']||keys['A']||keys['ArrowLeft']) vx-=1;
+    if(keys['d']||keys['D']||keys['ArrowRight']) vx+=1;
+    if(keys['w']||keys['W']||keys['ArrowUp']) vy-=1;
+    if(keys['s']||keys['S']||keys['ArrowDown']) vy+=1;
+    if(vx&&vy){vx*=0.707;vy*=0.707;}
+    player.x=Math.max(20,Math.min(WW-20,player.x+vx*player.speed*dt));
+    player.y=Math.max(20,Math.min(WH-20,player.y+vy*player.speed*dt));
+    if(vx) player.facing=vx>0?1:-1;
+    if(vx||vy) player.bobOffset+=dt*8;
+  }
+
+  // NPC movement
+  PKEYS.forEach(k=>{
+    const n=npcs[k];
+    if(state.dialogOpen&&state.activeNPC===k) return;
+    updateAnim(k,dt);
+    const dx=n.tx-n.x,dy=n.ty-n.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<8){
+      if(n.waitTimer>0){ n.waitTimer-=dt; }
+      else{
+        const tgts=ZONES[n.zone];const base=tgts[PKEYS.indexOf(k)%tgts.length];
+        n.tx=base.x+(Math.random()-.5)*130; n.ty=base.y+(Math.random()-.5)*130;
+        n.tx=Math.max(30,Math.min(WW-30,n.tx)); n.ty=Math.max(30,Math.min(WH-30,n.ty));
+        n.waitTimer=2+Math.random()*4;
+      }
+    } else {
+      const spd=65; n.x+=dx/d*spd*dt; n.y+=dy/d*spd*dt;
+      if(dx) n.facing=dx>0?1:-1;
+    }
+
+    // bubble timer
+    if(n.bubble){
+      n.bubble.timer-=dt*1000;
+      if(n.bubble.timer<500) n.bubble.alpha=n.bubble.timer/500;
+      if(n.bubble.timer<=0) n.bubble=null;
+    }
+  });
+
+  // camera
+  cam.x=Math.max(0,Math.min(WW-VW,player.x-VW/2));
+  cam.y=Math.max(0,Math.min(WH-VH,player.y-VH/2));
+
+  // near NPC
+  let nearest=null,nearDist=85;
+  PKEYS.forEach(k=>{
+    const n=npcs[k];
+    const dx=player.x-n.x,dy=player.y-n.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<nearDist){nearDist=d;nearest=k;}
+  });
+  state.nearNPC=nearest;
+  const hint=document.getElementById('hint');
+  if(nearest&&!state.dialogOpen){
+    hint.style.opacity='1';
+    hint.textContent='Press E to talk to '+PERSONAS[nearest].name;
+  } else { hint.style.opacity='0'; }
+}
+
+function render(){
+  ctx.clearRect(0,0,VW,VH);
+
+  // world
+  ctx.drawImage(worldCanvas,-cam.x,-cam.y);
+
+  // sort draw order by Y
+  const drawList=[];
+  PKEYS.forEach(k=>{
+    const n=npcs[k];
+    drawList.push({type:'npc',k,y:n.y});
+  });
+  drawList.push({type:'player',y:player.y});
+  drawList.sort((a,b)=>a.y-b.y);
+
+  drawList.forEach(d=>{
+    if(d.type==='player'){
+      const sx=Math.round(player.x-cam.x), sy=Math.round(player.y-cam.y);
+      ctx.save(); ctx.translate(sx,sy);
+      const bob=Math.sin(player.bobOffset)*2;
+      ctx.translate(0,bob);
+      drawPlayer(ctx,player.facing<0);
+      ctx.restore();
+      // label
+      ctx.save();
+      ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+      ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText('YOU',sx,sy-82);
+      ctx.fillStyle='#ffe082'; ctx.fillText('YOU',sx,sy-82);
+      ctx.restore();
+    } else {
+      const n=npcs[d.k];
+      const sx=Math.round(n.x-cam.x), sy=Math.round(n.y-cam.y);
+      ctx.save(); ctx.translate(sx,sy);
+      if(n.animAngle) ctx.rotate(n.animAngle*Math.PI/180);
+      drawChar(ctx,PERSONAS[d.k].body,{waving:n.waving,flipX:n.facing<0});
+      ctx.restore();
+      // label
+      ctx.save();
+      ctx.font='bold 11px Courier New'; ctx.textAlign='center';
+      ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText(PERSONAS[d.k].name,sx,sy-84);
+      ctx.fillStyle='#fff'; ctx.fillText(PERSONAS[d.k].name,sx,sy-84);
+      ctx.restore();
+      // bubble
+      if(n.bubble&&n.bubble.alpha>0){
+        ctx.save(); ctx.globalAlpha=n.bubble.alpha;
+        drawBubble(ctx,sx,sy-95,n.bubble.text);
+        ctx.restore();
+      }
+    }
+  });
+
+  renderMinimap();
+}
+
+function drawBubble(ctx,x,y,text){
+  const maxW=150, pad=9;
+  ctx.font='10px Courier New'; ctx.textAlign='center';
+  const words=text.split(' '); let lines=[],line='';
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(ctx.measureText(test).width>maxW-pad*2){lines.push(line);line=w;}
+    else line=test;
+  }
+  if(line) lines.push(line);
+  const lh=13,tw=lines.reduce((m,l)=>Math.max(m,ctx.measureText(l).width),0)+pad*2;
+  const th=lines.length*lh+pad*1.5;
+  const bx=x-tw/2,by=y-th-6;
+  // box
+  ctx.fillStyle='rgba(255,254,240,0.95)';
+  roundRect(ctx,bx,by,tw,th,6); ctx.fill();
+  ctx.strokeStyle='rgba(100,100,80,0.5)'; ctx.lineWidth=1;
+  roundRect(ctx,bx,by,tw,th,6); ctx.stroke();
+  // tail
+  ctx.fillStyle='rgba(255,254,240,0.95)';
+  ctx.beginPath(); ctx.moveTo(x-5,y-6); ctx.lineTo(x+5,y-6); ctx.lineTo(x,y); ctx.closePath(); ctx.fill();
+  // text
+  ctx.fillStyle='#111';
+  lines.forEach((l,i)=>ctx.fillText(l,x,by+pad+lh*i+lh*0.8));
+}
+
+function renderMinimap(){
+  const mw=130,mh=98,sx=mw/WW,sy=mh/WH;
+  mmx.fillStyle='#2a4a3a'; mmx.fillRect(0,0,mw,mh);
+  mmx.fillStyle='#555566';
+  mmx.fillRect(0,840*sy,mw,80*sy); mmx.fillRect(1100*sx,0,80*sx,mh);
+  // zones
+  [{x:80,y:70,w:350,h:360,c:'rgba(90,140,80,0.5)'},{x:1640,y:70,w:400,h:350,c:'rgba(80,110,130,0.5)'},
+   {x:1090,y:790,w:280,h:280,c:'rgba(70,140,100,0.5)'},{x:440,y:1280,w:230,h:220,c:'rgba(200,160,80,0.5)'},
+   {x:1640,y:1260,w:360,h:290,c:'rgba(80,20,100,0.5)'}].forEach(z=>{
+    mmx.fillStyle=z.c; mmx.fillRect(z.x*sx,z.y*sy,z.w*sx,z.h*sy);
+  });
+  PKEYS.forEach(k=>{
+    const n=npcs[k];
+    mmx.fillStyle=PERSONAS[k].dot;
+    mmx.beginPath(); mmx.arc(n.x*sx,n.y*sy,3.5,0,Math.PI*2); mmx.fill();
+  });
+  mmx.fillStyle='#ffe082';
+  mmx.beginPath(); mmx.arc(player.x*sx,player.y*sy,4.5,0,Math.PI*2); mmx.fill();
+  mmx.strokeStyle='#fff'; mmx.lineWidth=1.5; mmx.stroke();
+}
 </script>
 </body>
 </html>
