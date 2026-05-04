@@ -1483,181 +1483,153 @@ function drawPoster(ctx,x,y,col,text){
   ctx.fillStyle='#fff'; ctx.font='bold 7px monospace'; ctx.fillText(text,x+4,y+20);
 }
 
-// ── Persona character drawing ──────────────────────────────────────────────
-// Each character is drawn at cx=160, feet at cy=148, approx 70px tall
-function drawPersona(ctx, pid, mood) {
-  const cx = 160, cy = 148;
-  const cfg = personaCfgs[pid] || personaCfgs.brent;
-  drawCharAtPos(ctx, cx, cy, cfg, mood);
-}
+// ── Persona character drawing ─────────────────────────────────────────────
+// Uses the actual pixel-art portrait images + drawn pixel-art bodies
 
-const personaCfgs = {
-  brent: { skin:'#ffd5b5', hair:'#5d3a1a', shirt:'#9fa8da', pants:'#283593', eye:'#3d2b1f', hStyle:'normal' },
-  brian: { skin:'#ffd5b5', hair:'#212121', shirt:'#ef9a9a', pants:'#212121', eye:'#3d2b1f', hStyle:'flat' },
-  glen:  { skin:'#ffd5b5', hair:'#6d4c41', shirt:'#80cbc4', pants:'#37474f', eye:'#3d2b1f', hStyle:'curly' },
-  danny: { skin:'#ffd5b5', hair:'#1a1a1a', shirt:'#a5d6a7', pants:'#1a1a2e', eye:'#3d2b1f', hStyle:'medium' },
-  t800:  { skin:'#b0bec5', hair:null,       shirt:'#546e7a', pants:'#263238', eye:'#ff1a00', hStyle:'none', robot:true },
-  chris: { skin:'#ffccaa', hair:'#8B4513', shirt:'#ffcc80', pants:'#1565c0', eye:'#3d2b1f', hStyle:'spiky', flames:true, zit:true },
+// Shirt / pants colours per persona
+const BODY_COLORS = {
+  brent: { shirt:'#9fa8da', pants:'#283593', skin:'#c49a6c' },
+  brian: { shirt:'#555', pants:'#212121', skin:'#c08860' },
+  glen:  { shirt:'#80cbc4', pants:'#37474f', skin:'#c49060' },
+  danny: { shirt:'#a5d6a7', pants:'#1a1a2e', skin:'#c49060' },
+  t800:  { shirt:'#546e7a', pants:'#263238', skin:'#b08050' },
+  chris: { shirt:'#ffcc80', pants:'#1565c0', skin:'#d4a070' },
 };
 
-function drawCharAtPos(ctx, cx, cy, cfg, mood) {
-  ctx.save();
+function drawPersona(ctx, pid, mood) {
+  const cx = 160;
+  // 1 — pixel-art body behind / below the face
+  drawPixelBody(ctx, cx, pid, mood);
+
+  // 2 — actual portrait image, clipped to an oval
+  const imgEl = document.querySelector('#card-' + pid + ' img');
+  if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+    ctx.save();
+    // oval clip centred at (cx, 76): wide enough for face+neck, height clips black bg top/bottom
+    ctx.beginPath();
+    ctx.ellipse(cx, 76, 66, 74, 0, 0, Math.PI * 2);
+    ctx.clip();
+    // portrait is square — draw it so the face fills the oval
+    ctx.drawImage(imgEl, cx - 78, -2, 156, 156);
+    ctx.restore();
+
+    // thin warm rim-light around the oval
+    ctx.strokeStyle = 'rgba(255,180,80,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, 76, 67, 75, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 3 — mood indicators on top
+  drawMoodFX(ctx, cx, mood, pid);
+}
+
+function drawPixelBody(ctx, cx, pid, mood) {
+  const c = BODY_COLORS[pid] || BODY_COLORS.brent;
+  const by = 138; // top of torso
+
   // shadow
-  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx,cy,16,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(cx, 193, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+  // legs
+  ctx.fillStyle = c.pants;
+  ctx.fillRect(cx - 17, by + 32, 15, 26);
+  ctx.fillRect(cx + 2,  by + 32, 15, 26);
 
   // shoes
-  ctx.fillStyle='#222';
-  ctx.fillRect(cx-14,cy-8,12,7); ctx.fillRect(cx+2,cy-8,12,7);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(cx - 20, by + 54, 19, 8);
+  ctx.fillRect(cx + 1,  by + 54, 19, 8);
 
-  // pants/legs
-  ctx.fillStyle=cfg.pants;
-  ctx.fillRect(cx-11,cy-22,9,15); ctx.fillRect(cx+2,cy-22,9,15);
+  // torso
+  ctx.fillStyle = c.shirt;
+  ctx.fillRect(cx - 23, by, 46, 34);
 
-  // body
-  ctx.fillStyle=cfg.shirt;
-  ctx.beginPath(); ctx.roundRect(cx-12,cy-44,24,24,[6]); ctx.fill();
+  // arms — pose shifts by mood
+  ctx.fillStyle = c.shirt;
+  if (mood === 'happy' || mood === 'laughing') {
+    ctx.fillRect(cx - 40, by - 16, 18, 28);  // left raised
+    ctx.fillRect(cx + 22, by - 16, 18, 28);  // right raised
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(cx - 31, by - 18, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 31, by - 18, 8, 0, Math.PI*2); ctx.fill();
+  } else if (mood === 'thinking') {
+    ctx.fillRect(cx - 40, by, 18, 26);       // left down
+    ctx.fillRect(cx + 22, by - 10, 18, 28);  // right raised to chin
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(cx - 31, by + 26, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 31, by + 0,  8, 0, Math.PI*2); ctx.fill();
+  } else if (mood === 'surprised') {
+    ctx.fillRect(cx - 44, by - 6, 18, 22);   // arms wide out
+    ctx.fillRect(cx + 26, by - 6, 18, 22);
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(cx - 35, by - 8, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 35, by - 8, 8, 0, Math.PI*2); ctx.fill();
+  } else {                                    // idle / sad / annoyed
+    ctx.fillRect(cx - 40, by, 18, 28);
+    ctx.fillRect(cx + 22, by, 18, 28);
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(cx - 31, by + 28, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 31, by + 28, 8, 0, Math.PI*2); ctx.fill();
+  }
+}
 
-  // arms — mood affects pose
-  ctx.fillStyle=cfg.shirt;
-  if(mood==='happy'||mood==='laughing'){
-    // arms up enthusiastically
-    ctx.fillRect(cx-22,cy-52,9,16); ctx.fillRect(cx+13,cy-52,9,16);
-    ctx.fillStyle=cfg.skin; ctx.beginPath(); ctx.arc(cx-17,cy-53,5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+17,cy-53,5,0,Math.PI*2); ctx.fill();
-  } else if(mood==='thinking'){
-    // one arm up to chin
-    ctx.fillRect(cx-22,cy-42,9,16); ctx.fillRect(cx+13,cy-50,9,18);
-    ctx.fillStyle=cfg.skin; ctx.beginPath(); ctx.arc(cx-17,cy-27,5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+17,cy-33,5,0,Math.PI*2); ctx.fill();
-  } else if(mood==='surprised'){
-    // arms wide
-    ctx.fillRect(cx-28,cy-46,9,12); ctx.fillRect(cx+19,cy-46,9,12);
-    ctx.fillStyle=cfg.skin; ctx.beginPath(); ctx.arc(cx-22,cy-35,5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+22,cy-35,5,0,Math.PI*2); ctx.fill();
-  } else {
-    // idle/normal
-    ctx.fillRect(cx-22,cy-42,9,16); ctx.fillRect(cx+13,cy-42,9,16);
-    ctx.fillStyle=cfg.skin; ctx.beginPath(); ctx.arc(cx-17,cy-27,5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+17,cy-27,5,0,Math.PI*2); ctx.fill();
+function drawMoodFX(ctx, cx, mood, pid) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  if (mood === 'surprised') {
+    // pixel ! mark top-right
+    ctx.fillStyle = '#ffe044';
+    [0,1,2].forEach(i => ctx.fillRect(cx + 70, 8 + i * 9, 8, 7));
+    ctx.fillRect(cx + 70, 36, 8, 8);
+  } else if (mood === 'thinking') {
+    // thought bubble dots
+    ctx.fillStyle = 'rgba(210,225,255,0.9)';
+    [[cx+60,34,4],[cx+68,23,6],[cx+78,13,9]].forEach(([x,y,r]) => {
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    });
+  } else if (mood === 'laughing') {
+    ctx.fillStyle = 'rgba(255,220,40,0.92)';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText('ha!', cx + 62, 28);
+    ctx.font = 'bold 9px monospace';
+    ctx.fillText('ha!', cx + 70, 42);
+  } else if (mood === 'happy') {
+    // pixel sparkles
+    ctx.fillStyle = '#ffe044';
+    [[cx-76,12],[cx+72,12],[cx-72,42],[cx+68,42]].forEach(([x,y]) => {
+      ctx.fillRect(x,   y,   4, 4);
+      ctx.fillRect(x-4, y+2, 12,2);
+      ctx.fillRect(x+2, y-4, 2, 12);
+    });
+  } else if (mood === 'annoyed') {
+    ctx.strokeStyle = '#ff6633'; ctx.lineWidth = 3;
+    [[cx+64,22,cx+78,12],[cx+68,34,cx+82,26]].forEach(([x1,y1,x2,y2]) => {
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    });
+  } else if (mood === 'sad') {
+    ctx.fillStyle = 'rgba(100,160,255,0.75)';
+    [[cx-72,22],[cx-66,38],[cx+68,28],[cx+74,44]].forEach(([x,y]) => {
+      ctx.fillRect(x, y, 3, 9);
+    });
   }
 
-  // neck
-  ctx.fillStyle=cfg.skin; ctx.fillRect(cx-5,cy-46,10,5);
-
-  // head (big AC-style)
-  ctx.fillStyle=cfg.skin; ctx.beginPath(); ctx.arc(cx,cy-58,18,0,Math.PI*2); ctx.fill();
-
-  // hair
-  if(cfg.hair) {
-    ctx.fillStyle=cfg.hair;
-    if(cfg.hStyle==='spiky'){
-      ctx.beginPath(); ctx.arc(cx,cy-64,13,0,Math.PI*2); ctx.fill();
-      [[-10,-72],[-4,-80],[0,-84],[4,-80],[10,-72]].forEach(([ox,oy])=>{
-        ctx.beginPath(); ctx.moveTo(cx+ox-4,cy-66); ctx.lineTo(cx+ox+4,cy-66); ctx.lineTo(cx+ox,cy+oy); ctx.closePath(); ctx.fill();
-      });
-    } else if(cfg.hStyle==='flat'){
-      ctx.beginPath(); ctx.arc(cx,cy-64,13,0,Math.PI*2); ctx.fill();
-      ctx.fillRect(cx-17,cy-72,34,8);
-    } else if(cfg.hStyle==='curly'){
-      ctx.beginPath(); ctx.arc(cx,cy-65,14,0,Math.PI*2); ctx.fill();
-      for(let i=0;i<8;i++){ const a=i/8*Math.PI*2; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*11,cy-65+Math.sin(a)*7,5,0,Math.PI*2); ctx.fill(); }
-    } else if(cfg.hStyle==='medium'){
-      ctx.beginPath(); ctx.arc(cx,cy-64,14,0,Math.PI*2); ctx.fill();
-      ctx.fillRect(cx-15,cy-76,30,14); ctx.fillRect(cx-18,cy-70,7,16); ctx.fillRect(cx+11,cy-70,7,16);
-    } else {
-      ctx.beginPath(); ctx.arc(cx,cy-64,13,0,Math.PI*2); ctx.fill();
-      ctx.fillRect(cx-14,cy-74,28,13);
+  // T-800: red scanlines + HUD text
+  if (pid === 't800') {
+    ctx.strokeStyle = 'rgba(255,26,0,0.13)'; ctx.lineWidth = 1;
+    for (let y = 0; y < 200; y += 3) {
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(320,y); ctx.stroke();
     }
-  } else if(cfg.robot){
-    ctx.strokeStyle='#90a4ae'; ctx.lineWidth=1.5; ctx.strokeRect(cx-14,cy-72,28,12);
-    ctx.fillStyle='rgba(144,164,174,0.2)'; ctx.fillRect(cx-14,cy-72,28,12);
-  }
-
-  // flames (Chris)
-  if(cfg.flames){
-    ctx.fillStyle='rgba(255,100,0,0.9)';
-    ctx.beginPath(); ctx.moveTo(cx-6,cy-74); ctx.lineTo(cx-2,cy-90); ctx.lineTo(cx+2,cy-74); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx-2,cy-72); ctx.lineTo(cx+2,cy-85); ctx.lineTo(cx+6,cy-72); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,200,0,0.7)';
-    ctx.beginPath(); ctx.moveTo(cx-2,cy-72); ctx.lineTo(cx,cy-80); ctx.lineTo(cx+2,cy-72); ctx.closePath(); ctx.fill();
-  }
-
-  // eyes
-  ctx.fillStyle='white';
-  ctx.beginPath(); ctx.ellipse(cx-7,cy-58,5,6,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+7,cy-58,5,6,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=cfg.eye;
-  ctx.beginPath(); ctx.arc(cx-7,cy-58,3.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx+7,cy-58,3.5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.8)';
-  ctx.beginPath(); ctx.arc(cx-5.5,cy-56.5,1.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx+8.5,cy-56.5,1.5,0,Math.PI*2); ctx.fill();
-
-  // mood-specific eye expression
-  if(mood==='surprised'){ // wider eyes
-    ctx.fillStyle='white'; ctx.beginPath(); ctx.ellipse(cx-7,cy-58,6,7,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx+7,cy-58,6,7,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=cfg.eye; ctx.beginPath(); ctx.arc(cx-7,cy-58,4,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+7,cy-58,4,0,Math.PI*2); ctx.fill();
-  } else if(mood==='annoyed'){ // eyebrows furrowed
-    ctx.strokeStyle='#333'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(cx-11,cy-66); ctx.lineTo(cx-3,cy-63); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+11,cy-66); ctx.lineTo(cx+3,cy-63); ctx.stroke();
-  } else if(mood==='sad'){
-    ctx.strokeStyle='#333'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(cx-11,cy-63); ctx.lineTo(cx-3,cy-66); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+3,cy-66); ctx.lineTo(cx+11,cy-63); ctx.stroke();
-  }
-
-  // nose
-  ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.arc(cx,cy-53,2,0,Math.PI*2); ctx.fill();
-
-  // zit (Chris)
-  if(cfg.zit){ ctx.fillStyle='#ff6666'; ctx.beginPath(); ctx.arc(cx+8,cy-65,3,0,Math.PI*2); ctx.fill(); }
-
-  // robot eye glow
-  if(cfg.robot){ ctx.fillStyle='rgba(255,26,0,0.2)'; ctx.beginPath(); ctx.arc(cx-7,cy-58,9,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(cx+7,cy-58,9,0,Math.PI*2); ctx.fill(); }
-
-  // mouth
-  ctx.strokeStyle='#3d2b1f'; ctx.lineWidth=1.8;
-  if(mood==='happy'||mood==='laughing'){
-    ctx.beginPath(); ctx.arc(cx,cy-48,6,0,Math.PI); ctx.stroke();
-    if(mood==='laughing'){ ctx.fillStyle='#3d2b1f'; ctx.beginPath(); ctx.arc(cx,cy-45,4,0,Math.PI); ctx.fill(); }
-  } else if(mood==='sad'||mood==='annoyed'){
-    ctx.beginPath(); ctx.arc(cx,cy-44,5,Math.PI,0); ctx.stroke();
-  } else if(mood==='surprised'){
-    ctx.fillStyle='#3d2b1f'; ctx.beginPath(); ctx.arc(cx,cy-47,5,0,Math.PI*2); ctx.fill();
-  } else if(mood==='thinking'){
-    ctx.beginPath(); ctx.moveTo(cx-4,cy-48); ctx.lineTo(cx+4,cy-48); ctx.stroke();
-    ctx.fillStyle='#3d2b1f'; ctx.beginPath(); ctx.arc(cx+6,cy-50,2,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx+10,cy-52,1.5,0,Math.PI*2); ctx.fill();
-  } else {
-    ctx.beginPath(); ctx.arc(cx,cy-48,5,0,Math.PI); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,0,0,0.06)'; ctx.fillRect(0,0,320,200);
+    ctx.fillStyle = 'rgba(255,40,0,0.75)'; ctx.font = '5px monospace';
+    ctx.fillText('VISUAL CORTEX: ONLINE', 6, 9);
+    ctx.fillText('TARGET: ACQUIRED', 6, 17);
   }
 
   ctx.restore();
-}
-
-function drawMoodOverlay(ctx, mood) {
-  if(mood==='thinking'){
-    ctx.fillStyle='rgba(180,180,255,0.7)'; ctx.font='bold 14px monospace';
-    ctx.fillText('💭',174,80); ctx.fillText('...',185,72);
-  } else if(mood==='laughing'){
-    ctx.fillStyle='rgba(255,230,100,0.8)'; ctx.font='14px monospace';
-    ctx.fillText('😂',174,80);
-  } else if(mood==='surprised'){
-    ctx.fillStyle='rgba(255,200,0,0.9)'; ctx.font='bold 14px monospace';
-    ctx.fillText('!',185,68); ctx.font='bold 10px monospace'; ctx.fillText('!',193,75);
-  }
-  // robot scan lines
-  if(typeof vcallFriend !== 'undefined' && vcallFriend === 't800'){
-    ctx.strokeStyle='rgba(255,26,0,0.15)'; ctx.lineWidth=1;
-    for(let y=0;y<200;y+=4){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(320,y); ctx.stroke(); }
-    ctx.fillStyle='rgba(255,26,0,0.07)'; ctx.fillRect(0,0,320,200);
-    // HUD text
-    ctx.fillStyle='rgba(255,26,0,0.7)'; ctx.font='6px monospace';
-    ctx.fillText('VISUAL FEED ACTIVE',8,10); ctx.fillText('TARGET: ACQUIRED',8,18);
-  }
 }
 
 </script>
