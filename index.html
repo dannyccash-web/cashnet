@@ -1010,6 +1010,17 @@ let vcallTimerInterval = null;
 let vcallSeconds = 0;
 let vcallCurrentScene = 'home';
 let vcallCurrentMood = 'idle';
+// Pre-load portrait images from embedded data URLs for canvas use
+const VCALL_PORTRAIT_IMGS = {};
+function preloadVcallPortraits() {
+  Object.keys(IMGS).forEach(k => {
+    const img = new Image();
+    img.src = IMGS[k];
+    VCALL_PORTRAIT_IMGS[k] = img;
+  });
+}
+setTimeout(preloadVcallPortraits, 0);
+
 
 const VCALL_SCENE_SUFFIX = '\n\n[After your reply, on a new line write exactly: scene:LOCATION mood:MOOD — pick LOCATION from: home kitchen work park cafe venue gym street — pick MOOD from: idle happy thinking laughing surprised annoyed sad — based on context. No brackets, just those two words on that line separated by a space.]';
 
@@ -1159,7 +1170,6 @@ function renderVcallCanvas(scene, mood, personaId) {
 
   drawScene(ctx, scene, personaId);
   drawPersona(ctx, personaId, mood);
-  drawMoodOverlay(ctx, mood);
 }
 
 function drawScene(ctx, scene, pid) {
@@ -1502,7 +1512,7 @@ function drawPersona(ctx, pid, mood) {
   drawPixelBody(ctx, cx, pid, mood);
 
   // 2 — actual portrait image, clipped to an oval
-  const imgEl = document.querySelector('#card-' + pid + ' img');
+  const imgEl = VCALL_PORTRAIT_IMGS[pid];
   if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
     ctx.save();
     // oval clip centred at (cx, 76): wide enough for face+neck, height clips black bg top/bottom
