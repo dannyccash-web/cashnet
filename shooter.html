@@ -268,7 +268,7 @@
   </div>
 
   <div class="controls-hint">
-    <span>WASD</span> Move &nbsp;·&nbsp; <span>Mouse</span> Look &nbsp;·&nbsp; <span>Click</span> Shoot &nbsp;·&nbsp; <span>ESC</span> Pause
+    <span>↑↓←→ / WASD</span> Move &nbsp;·&nbsp; <span>Mouse</span> Look &nbsp;·&nbsp; <span>Click</span> Shoot &nbsp;·&nbsp; <span>ESC</span> Pause
   </div>
 
   <button class="btn-arena" id="play-btn">Enter Arena</button>
@@ -372,408 +372,534 @@ var PORTRAITS = {
 var kills = { brent:0, brian:0, glen:0, danny:0, t800:0, chris:0 };
 var totalScore = 0;
 
-// ─── ENGINE ───────────────────────────────────────────────────────────────────
+
+// ─── ENGINE ────────────────────────────────────────────────────────────────
 var Engine = (function() {
   function Engine(element, clearColor) {
     this.clock = new THREE.Clock();
     this.rigidBodies = [];
-    this.tempTransform = new Ammo.btTransform();
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setClearColor(clearColor);
+    this.tmpT = new Ammo.btTransform();
+    var cc=new Ammo.btDefaultCollisionConfiguration();
+    var dp=new Ammo.btCollisionDispatcher(cc);
+    var bp=new Ammo.btDbvtBroadphase();
+    var sol=new Ammo.btSequentialImpulseConstraintSolver();
+    this.physicsWorld=new Ammo.btDiscreteDynamicsWorld(dp,bp,sol,cc);
+    this.physicsWorld.setGravity(new Ammo.btVector3(0,-20,0));
+    this.renderer=new THREE.WebGLRenderer({antialias:true});
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(window.innerWidth,window.innerHeight);
+    this.renderer.shadowMap.enabled=true;
+    this.renderer.setClearColor(clearColor);
     element.appendChild(this.renderer.domElement);
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x050a12, 0.018);
-    var cc = new Ammo.btDefaultCollisionConfiguration();
-    var disp = new Ammo.btCollisionDispatcher(cc);
-    var cache = new Ammo.btAxisSweep3(new Ammo.btVector3(-1000,-1000,-1000), new Ammo.btVector3(1000,1000,1000));
-    var solver = new Ammo.btSequentialImpulseConstraintSolver();
-    this.physicsWorld = new Ammo.btDiscreteDynamicsWorld(disp, cache, solver, cc);
-    this.physicsWorld.setGravity(new Ammo.btVector3(0, -9.8, 0));
+    this.scene=new THREE.Scene();
+    this.scene.fog=new THREE.FogExp2(clearColor,0.005);
+    this.camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,.2,2000);
   }
-  Engine.prototype.enableShadows = function() { this.renderer.shadowMap.enabled = true; };
-  Engine.prototype.setCamera = function(cam) {
-    var _this = this;
-    this.camera = cam;
-    window.addEventListener('resize', function() {
-      _this.camera.aspect = window.innerWidth / window.innerHeight;
-      _this.camera.updateProjectionMatrix();
-      _this.renderer.setSize(window.innerWidth, window.innerHeight);
+  Engine.prototype.setCamera=function(cam){
+    this.camera=cam;
+    var _t=this;
+    window.addEventListener('resize',function(){
+      _t.camera.aspect=window.innerWidth/window.innerHeight;
+      _t.camera.updateProjectionMatrix();
+      _t.renderer.setSize(window.innerWidth,window.innerHeight);
     });
   };
-  Engine.prototype.getCamera = function() { return this.camera; };
-  Engine.prototype.addLight = function(l) { this.scene.add(l); };
-  Engine.prototype.addObject = function(o) { this.scene.add(o); };
-  Engine.prototype.addPhysicsObject = function(obj, body, mass) {
-    obj.userData.physicsBody = body;
-    if (mass > 0) { this.rigidBodies.push(obj); body.setActivationState(4); }
+  Engine.prototype.getCamera =function(){return this.camera;};
+  Engine.prototype.addLight  =function(l){this.scene.add(l);};
+  Engine.prototype.addObject =function(o){this.scene.add(o);};
+  Engine.prototype.addPhysicsObject=function(obj,body,mass){
+    obj.userData.physicsBody=body;
+    if(mass>0){this.rigidBodies.push(obj);body.setActivationState(4);}
     this.scene.add(obj);
     this.physicsWorld.addRigidBody(body);
   };
-  Engine.prototype.updatePhysics = function(delta) {
-    this.physicsWorld.stepSimulation(delta, 10);
-    for (var i = 0; i < this.rigidBodies.length; i++) {
-      var obj = this.rigidBodies[i];
-      var ms = obj.userData.physicsBody.getMotionState();
-      if (ms) {
-        ms.getWorldTransform(this.tempTransform);
-        var p = this.tempTransform.getOrigin();
-        obj.position.set(p.x(), p.y(), p.z());
-        var q = this.tempTransform.getRotation();
-        obj.quaternion.set(q.x(), q.y(), q.z(), q.w());
-      }
+  Engine.prototype.updatePhysics=function(dt){
+    this.physicsWorld.stepSimulation(dt,10);
+    for(var i=0;i<this.rigidBodies.length;i++){
+      var obj=this.rigidBodies[i];
+      var ms=obj.userData.physicsBody.getMotionState();
+      if(!ms)continue;
+      ms.getWorldTransform(this.tmpT);
+      var p=this.tmpT.getOrigin(),q=this.tmpT.getRotation();
+      obj.position.set(p.x(),p.y(),p.z());
+      obj.quaternion.set(q.x(),q.y(),q.z(),q.w());
     }
   };
-  Engine.prototype.update = function(physEnabled) {
-    var dt = this.clock.getDelta();
-    if (physEnabled) this.updatePhysics(dt);
-    this.renderer.render(this.scene, this.camera);
+  Engine.prototype.update=function(physEnabled){
+    var dt=this.clock.getDelta();
+    if(physEnabled)this.updatePhysics(dt);
+    this.renderer.render(this.scene,this.camera);
     return dt;
   };
   return Engine;
 })();
 
-// ─── SHAPE FACTORY ────────────────────────────────────────────────────────────
-var ShapeFactory = (function() {
-  function ShapeFactory(engine) { this.engine = engine; }
-  ShapeFactory.prototype.createRigidBody = function(obj, shape, mass, pos, quat) {
-    var t = new Ammo.btTransform();
-    t.setIdentity();
-    t.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-    t.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-    var ms = new Ammo.btDefaultMotionState(t);
-    var li = new Ammo.btVector3(0,0,0);
-    shape.calculateLocalInertia(mass, li);
-    var rbi = new Ammo.btRigidBodyConstructionInfo(mass, ms, shape, li);
-    var body = new Ammo.btRigidBody(rbi);
-    this.engine.addPhysicsObject(obj, body, mass);
+// ─── SHAPE FACTORY ───────────────────────────────────────────────────────────
+var ShapeFactory=(function(){
+  function ShapeFactory(engine){this.engine=engine;}
+  ShapeFactory.prototype._body=function(obj,shape,mass,pos,quat){
+    var t=new Ammo.btTransform();t.setIdentity();
+    t.setOrigin(new Ammo.btVector3(pos.x,pos.y,pos.z));
+    t.setRotation(new Ammo.btQuaternion(quat.x,quat.y,quat.z,quat.w));
+    var ms=new Ammo.btDefaultMotionState(t);
+    var li=new Ammo.btVector3(0,0,0);
+    shape.calculateLocalInertia(mass,li);
+    var bi=new Ammo.btRigidBodyConstructionInfo(mass,ms,shape,li);
+    var body=new Ammo.btRigidBody(bi);
+    this.engine.addPhysicsObject(obj,body,mass);
+    return body;
   };
-  ShapeFactory.prototype.createParalellepiped = function(sx, sy, sz, mass, pos, quat, material, charId) {
-    var mesh = new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz,1,1,1), material);
-    mesh.position.copy(pos);
-    mesh.quaternion.copy(quat);
-    mesh.userData.charId = charId;
-    mesh.userData.initY = pos.y;
-    mesh.userData.knocked = false;
-    var shape = new Ammo.btBoxShape(new Ammo.btVector3(sx*0.5, sy*0.5, sz*0.5));
-    shape.setMargin(0.05);
-    this.createRigidBody(mesh, shape, mass, pos, quat);
+  ShapeFactory.prototype.createBox=function(sx,sy,sz,mass,pos,quat,mat,charId){
+    var mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat);
+    mesh.position.copy(pos);mesh.quaternion.copy(quat);
+    mesh.userData.charId=charId;mesh.userData.initY=pos.y;mesh.userData.knocked=false;
+    var shape=new Ammo.btBoxShape(new Ammo.btVector3(sx*.5,sy*.5,sz*.5));
+    shape.setMargin(.05);
+    this._body(mesh,shape,mass,pos,quat);
     return mesh;
   };
-  ShapeFactory.prototype.createSphere = function(radius, mass, pos, quat, material) {
-    var mesh = new THREE.Mesh(new THREE.SphereGeometry(radius,18,16), material);
-    mesh.position.copy(pos);
-    mesh.quaternion.copy(quat);
-    var shape = new Ammo.btSphereShape(radius);
-    shape.setMargin(0.05);
-    this.createRigidBody(mesh, shape, mass, pos, quat);
+  ShapeFactory.prototype.createSphere=function(r,mass,pos,quat,mat){
+    var mesh=new THREE.Mesh(new THREE.SphereGeometry(r,18,16),mat);
+    mesh.position.copy(pos);mesh.quaternion.copy(quat);
+    mesh.userData.isBall=true;
+    var shape=new Ammo.btSphereShape(r);shape.setMargin(.05);
+    this._body(mesh,shape,mass,pos,quat);
     return mesh;
   };
-  ShapeFactory.prototype.createWall_X = function(mass, startX, endX, yCount, z, shift, materials, charId) {
-    var quat = new THREE.Quaternion(0,0,0,1);
-    for (var y = 0; y <= yCount; y += 1.5) {
-      var offsetX = shift ? 1.5 : 0; shift = !shift;
-      for (var x = startX; x <= endX; x += 3) {
-        var pos = new THREE.Vector3(x+offsetX, y+0.75, z);
-        var mat = materials[Math.floor(Math.random()*materials.length)];
-        var b = this.createParalellepiped(3,1.5,1.5, mass, pos, quat, mat, charId);
-        b.castShadow = true; b.receiveShadow = true;
+  // Bricks along X (unrotated), wall at wallZ
+  ShapeFactory.prototype._wallX=function(cx,wallZ,halfW,rows,mass,mats,charId,doorX,dHW,dRows){
+    var bW=3,bH=1.5,bD=1.5,q=new THREE.Quaternion(0,0,0,1);
+    for(var row=0;row<rows;row++){
+      var by=row*bH+bH*.5,stag=(row%2)?bW*.5:0;
+      var isDoor=dHW>0&&row<dRows;
+      for(var bx=cx-halfW+bW*.5+stag;bx<=cx+halfW-bW*.5+.01;bx+=bW){
+        if(isDoor&&Math.abs(bx-doorX)<dHW+bW*.3)continue;
+        var b=this.createBox(bW,bH,bD,mass,new THREE.Vector3(bx,by,wallZ),q,
+          mats[Math.floor(Math.random()*mats.length)],charId);
+        b.castShadow=b.receiveShadow=true;
       }
     }
   };
-  ShapeFactory.prototype.createWall_Z = function(mass, startZ, endZ, yCount, x, shift, materials, charId) {
-    var quat = new THREE.Quaternion(0,0,0,1);
-    quat.setFromAxisAngle(new THREE.Vector3(0,1,0), 90*Math.PI/180);
-    for (var y = 0; y <= yCount; y += 1.5) {
-      var offsetZ = shift ? 1.5 : 0; shift = !shift;
-      for (var z = startZ; z <= endZ; z += 3) {
-        var pos = new THREE.Vector3(x, y+0.75, z+offsetZ);
-        var mat = materials[Math.floor(Math.random()*materials.length)];
-        var b = this.createParalellepiped(3,1.5,1.5, mass, pos, quat, mat, charId);
-        b.castShadow = true; b.receiveShadow = true;
+  // Bricks along Z (rotated 90°), wall at wallX
+  ShapeFactory.prototype._wallZ=function(wallX,cz,halfD,rows,mass,mats,charId,doorZ,dHW,dRows){
+    var bW=3,bH=1.5,bD=1.5;
+    var q=new THREE.Quaternion();q.setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI*.5);
+    for(var row=0;row<rows;row++){
+      var by=row*bH+bH*.5,stag=(row%2)?bW*.5:0;
+      var isDoor=dHW>0&&row<dRows;
+      for(var bz=cz-halfD+bW*.5+stag;bz<=cz+halfD-bW*.5+.01;bz+=bW){
+        if(isDoor&&Math.abs(bz-doorZ)<dHW+bW*.3)continue;
+        var b=this.createBox(bW,bH,bD,mass,new THREE.Vector3(wallX,by,bz),q,
+          mats[Math.floor(Math.random()*mats.length)],charId);
+        b.castShadow=b.receiveShadow=true;
       }
     }
+  };
+  // Hollow building with doorway
+  ShapeFactory.prototype.createBuilding=function(cx,cz,bW,bD,rows,mass,mats,charId,doorFace){
+    var hW=bW*.5,hD=bD*.5,dHW=4.8,dRows=3;
+    this._wallX(cx,cz-hD,hW,rows,mass,mats,charId,doorFace==='north'?cx:1e9,dHW,dRows);
+    this._wallX(cx,cz+hD,hW,rows,mass,mats,charId,doorFace==='south'?cx:1e9,dHW,dRows);
+    this._wallZ(cx-hW,cz,hD,rows,mass,mats,charId,doorFace==='west'?cz:1e9,dHW,dRows);
+    this._wallZ(cx+hW,cz,hD,rows,mass,mats,charId,doorFace==='east'?cz:1e9,dHW,dRows);
   };
   return ShapeFactory;
 })();
 
-// ─── WASD CONTROLS ───────────────────────────────────────────────────────────
-var WASDControls = (function() {
-  function WASDControls(camera) {
-    this.moveForward = this.moveBackward = this.moveLeft = this.moveRight = false;
-    this.enabled = false;
-    this.velocity = new THREE.Vector3(1,1,1);
-    camera.rotation.set(0,0,0);
-    this.pitchObject = new THREE.Object3D();
-    this.pitchObject.add(camera);
-    this.yawObject = new THREE.Object3D();
-    this.yawObject.position.y = 10;
-    this.yawObject.add(this.pitchObject);
-    this.initEvents();
+// ─── HUMANOID MESH ───────────────────────────────────────────────────────────
+function createHumanoid(hexColor){
+  var col=new THREE.Color(hexColor);
+  var mat =new THREE.MeshPhongMaterial({color:col,shininess:55});
+  var dmat=new THREE.MeshPhongMaterial({color:col.clone().multiplyScalar(.35),shininess:30});
+  var emat=new THREE.MeshPhongMaterial({color:0x00d4ff,emissive:0x00d4ff});
+  var g=new THREE.Group();
+  function add(geo,m,x,y,z){
+    var mesh=new THREE.Mesh(geo,m);
+    mesh.position.set(x,y,z);
+    mesh.castShadow=true;
+    g.add(mesh);
+    return mesh;
   }
-  WASDControls.prototype.getObject = function() { return this.yawObject; };
-  WASDControls.prototype.setPitchX = function(x) { this.pitchObject.rotation.x = x; };
-  WASDControls.prototype.initEvents = function() {
-    var _this = this;
-    document.addEventListener('mousemove', function(e) {
-      if (!_this.enabled) return;
-      var mx = e.movementX||e.mozMovementX||e.webkitMovementX||0;
-      var my = e.movementY||e.mozMovementY||e.webkitMovementY||0;
-      _this.yawObject.rotation.y -= mx*0.002;
-      _this.pitchObject.rotation.x -= my*0.002;
-      _this.pitchObject.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, _this.pitchObject.rotation.x));
+  add(new THREE.BoxGeometry(.28,.9,.28),  dmat,-.18,.45,0); // L leg
+  add(new THREE.BoxGeometry(.28,.9,.28),  dmat, .18,.45,0); // R leg
+  add(new THREE.BoxGeometry(.72,1.05,.42),mat,  0, 1.43,0); // torso
+  add(new THREE.BoxGeometry(.22,.78,.22), dmat,-.50,1.22,0);// L arm
+  add(new THREE.BoxGeometry(.22,.78,.22), dmat, .50,1.22,0);// R arm
+  add(new THREE.SphereGeometry(.32,8,6),  mat,  0, 2.2, 0); // head
+  add(new THREE.SphereGeometry(.07,5,4),  emat,-.11,2.26,.28); // L eye
+  add(new THREE.SphereGeometry(.07,5,4),  emat, .11,2.26,.28); // R eye
+  return g;
+}
+
+// ─── NPC AI ──────────────────────────────────────────────────────────────────
+var npcs=[];
+var activeBalls=[];
+var playerHP=100;
+
+function NPC(group,charId,startPos){
+  this.group=group;
+  this.charId=charId;
+  this.hp=3;
+  this.state='patrol';
+  this.patrolTgt=new THREE.Vector3();
+  this.atkCd=Math.random()*2;
+  this.group.position.set(startPos.x,0,startPos.z);
+  this._newPatrol();
+}
+NPC.prototype._newPatrol=function(){
+  var r=140;
+  this.patrolTgt.set((Math.random()-.5)*r,0,(Math.random()-.5)*r);
+};
+NPC.prototype.takeDamage=function(){
+  if(this.state==='dead')return;
+  this.hp--;
+  var g=this.group;
+  g.traverse(function(c){if(c.isMesh&&c.material)c.material.emissive.setHex(0xff2200);});
+  setTimeout(function(){g.traverse(function(c){if(c.isMesh&&c.material)c.material.emissive.setHex(0);});},250);
+  if(this.hp<=0)this.die();
+};
+NPC.prototype.die=function(){
+  this.state='dead';
+  this.group.rotation.z=Math.PI*.5;
+  this.group.position.y=-.6;
+  addKill(this.charId);
+  var _t=this;
+  setTimeout(function(){_t.respawn();},12000);
+};
+NPC.prototype.respawn=function(){
+  this.hp=3;this.state='patrol';
+  this.group.rotation.z=0;
+  this.group.position.set((Math.random()-.5)*200,0,(Math.random()-.5)*200);
+  this._newPatrol();
+};
+NPC.prototype.update=function(dt,playerPos,active){
+  if(this.state==='dead')return;
+  var dist=this.group.position.distanceTo(playerPos);
+  if(active){
+    if(this.state==='patrol'&&dist<70)this.state='chase';
+    if(this.state==='chase' &&dist>90)this.state='patrol';
+    if(this.state==='chase' &&dist<22)this.state='attack';
+    if(this.state==='attack'&&dist>28)this.state='chase';
+    if(this.hp<=1&&this.state!=='dead')this.state='hide';
+  }
+  var spd=0,tx=this.group.position.x,tz=this.group.position.z;
+  if(this.state==='patrol'){
+    spd=5;tx=this.patrolTgt.x;tz=this.patrolTgt.z;
+    if(this.group.position.distanceTo(this.patrolTgt)<5)this._newPatrol();
+  }else if(this.state==='chase'){
+    spd=9;tx=playerPos.x;tz=playerPos.z;
+  }else if(this.state==='attack'){
+    var ang=Math.atan2(this.group.position.z-playerPos.z,this.group.position.x-playerPos.x)+dt*1.2;
+    tx=playerPos.x+Math.cos(ang)*20;tz=playerPos.z+Math.sin(ang)*20;spd=7;
+    this.atkCd-=dt;
+    if(this.atkCd<=0){this.atkCd=1.8+Math.random()*.8;flashDamage();}
+  }else if(this.state==='hide'){
+    var fdx=this.group.position.x-playerPos.x,fdz=this.group.position.z-playerPos.z;
+    var fdl=Math.sqrt(fdx*fdx+fdz*fdz)||1;
+    tx=this.group.position.x+fdx/fdl*60;tz=this.group.position.z+fdz/fdl*60;
+    tx=Math.max(-185,Math.min(185,tx));tz=Math.max(-185,Math.min(185,tz));
+    spd=11;
+  }
+  if(spd>0){
+    var dx=tx-this.group.position.x,dz=tz-this.group.position.z;
+    var len=Math.sqrt(dx*dx+dz*dz);
+    if(len>0.5){
+      dx/=len;dz/=len;
+      var mv=Math.min(spd*dt,len);
+      this.group.position.x+=dx*mv;
+      this.group.position.z+=dz*mv;
+      this.group.rotation.y=Math.atan2(dx,dz);
+    }
+  }
+  this.group.position.y=Math.sin(Date.now()*.004+this.charId.charCodeAt(0))*.1;
+};
+
+// ─── ARROW + WASD CONTROLS ───────────────────────────────────────────────────
+var WASDControls=(function(){
+  function WASDControls(camera){
+    this.fwd=this.bwd=this.lft=this.rgt=false;
+    this.enabled=false;
+    this.vel=new THREE.Vector3();
+    camera.rotation.set(0,0,0);
+    this.pitchObj=new THREE.Object3D();
+    this.pitchObj.add(camera);
+    this.yawObj=new THREE.Object3D();
+    this.yawObj.position.y=4;
+    this.yawObj.add(this.pitchObj);
+    this._init();
+  }
+  WASDControls.prototype.getObject=function(){return this.yawObj;};
+  WASDControls.prototype.setPitchX=function(x){this.pitchObj.rotation.x=x;};
+  WASDControls.prototype._init=function(){
+    var _t=this;
+    document.addEventListener('mousemove',function(e){
+      if(!_t.enabled)return;
+      var mx=e.movementX||e.mozMovementX||0;
+      var my=e.movementY||e.mozMovementY||0;
+      _t.yawObj.rotation.y-=mx*.002;
+      _t.pitchObj.rotation.x-=my*.002;
+      _t.pitchObj.rotation.x=Math.max(-Math.PI*.45,Math.min(Math.PI*.45,_t.pitchObj.rotation.x));
     });
-    document.addEventListener('keydown', function(e) { _this.setMove(e.keyCode, true); });
-    document.addEventListener('keyup',   function(e) { _this.setMove(e.keyCode, false); });
+    document.addEventListener('keydown',function(e){_t._key(e.keyCode,true);if(e.keyCode>=37&&e.keyCode<=40)e.preventDefault();});
+    document.addEventListener('keyup',  function(e){_t._key(e.keyCode,false);});
   };
-  WASDControls.prototype.setMove = function(k, v) {
-    if (!this.enabled) return;
-    if (k===87) this.moveForward=v;
-    if (k===65) this.moveLeft=v;
-    if (k===83) this.moveBackward=v;
-    if (k===68) this.moveRight=v;
+  WASDControls.prototype._key=function(k,v){
+    if(k===87||k===38)this.fwd=v; // W / Up
+    if(k===83||k===40)this.bwd=v; // S / Down
+    if(k===65||k===37)this.lft=v; // A / Left
+    if(k===68||k===39)this.rgt=v; // D / Right
   };
-  WASDControls.prototype.update = function(dt) {
-    if (!this.enabled) return;
-    var f = 10*dt;
-    this.velocity.x -= this.velocity.x*f;
-    this.velocity.z -= this.velocity.z*f;
-    var s = 400*dt;
-    if (this.moveForward)  this.velocity.z -= s;
-    if (this.moveBackward) this.velocity.z += s;
-    if (this.moveLeft)     this.velocity.x -= s;
-    if (this.moveRight)    this.velocity.x += s;
-    this.yawObject.translateX(this.velocity.x*dt);
-    this.yawObject.translateZ(this.velocity.z*dt);
+  WASDControls.prototype.update=function(dt){
+    if(!this.enabled)return;
+    var f=10*dt;
+    this.vel.x-=this.vel.x*f;this.vel.z-=this.vel.z*f;
+    var s=380*dt;
+    if(this.fwd)this.vel.z-=s;if(this.bwd)this.vel.z+=s;
+    if(this.lft)this.vel.x-=s;if(this.rgt)this.vel.x+=s;
+    this.yawObj.translateX(this.vel.x*dt);
+    this.yawObj.translateZ(this.vel.z*dt);
+    if(this.yawObj.position.y<4)this.yawObj.position.y=4;
   };
   return WASDControls;
 })();
 
-// ─── POINTER LOCK ─────────────────────────────────────────────────────────────
-function lockPointer(controls) {
-  var pauseEl = document.getElementById('pause-msg');
-  var blocker = document.getElementById('blocker');
-  var hud     = document.getElementById('hud');
-  var xhair   = document.getElementById('crosshair');
-  var scoreEl = document.getElementById('score-display');
-
-  var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document;
-  if (!havePointerLock) {
-    controls.enabled = true;
-    blocker.classList.add('hidden');
-    hud.classList.add('visible');
-    xhair.classList.add('visible');
-    scoreEl.classList.add('visible');
-    document.getElementById('error-msg').style.display = 'block';
-    return;
+// ─── POINTER LOCK ────────────────────────────────────────────────────────────
+function lockPointer(controls){
+  var pause=document.getElementById('pause-msg');
+  var blocker=document.getElementById('blocker');
+  var hud=document.getElementById('hud');
+  var xhair=document.getElementById('crosshair');
+  var scoreEl=document.getElementById('score-display');
+  var body=document.body;
+  body.requestPointerLock=body.requestPointerLock||body.mozRequestPointerLock||body.webkitRequestPointerLock;
+  if(!('pointerLockElement' in document||'mozPointerLockElement' in document)){
+    controls.enabled=true;blocker.classList.add('hidden');
+    hud.classList.add('visible');xhair.style.opacity='1';scoreEl.classList.add('visible');return;
   }
-
-  var body = document.body;
-  body.requestPointerLock = body.requestPointerLock||body.mozRequestPointerLock||body.webkitRequestPointerLock;
-
-  var onChange = function() {
-    if (document.pointerLockElement===body||document.mozPointerLockElement===body) {
-      controls.enabled = true;
-      blocker.classList.add('hidden');
-      pauseEl.classList.remove('visible');
-      hud.classList.add('visible');
-      xhair.classList.add('visible');
-      scoreEl.classList.add('visible');
-    } else {
-      controls.enabled = false;
-      pauseEl.classList.add('visible');
-      xhair.classList.remove('visible');
+  function onChange(){
+    if(document.pointerLockElement===body||document.mozPointerLockElement===body){
+      controls.enabled=true;blocker.classList.add('hidden');pause.classList.remove('visible');
+      hud.classList.add('visible');xhair.style.opacity='1';scoreEl.classList.add('visible');
+    }else{
+      controls.enabled=false;pause.classList.add('visible');xhair.style.opacity='0';
     }
-  };
-
-  document.addEventListener('pointerlockchange', onChange);
-  document.addEventListener('mozpointerlockchange', onChange);
-
-  document.addEventListener('keydown', function(e) {
-    if (e.keyCode===27 && controls.enabled) {
-      controls.enabled = false;
-      pauseEl.classList.add('visible');
-    }
+  }
+  document.addEventListener('pointerlockchange',onChange);
+  document.addEventListener('mozpointerlockchange',onChange);
+  document.addEventListener('keydown',function(e){
+    if(e.keyCode===27&&controls.enabled){controls.enabled=false;pause.classList.add('visible');}
   });
-
   body.requestPointerLock();
 }
 
-// ─── MOUSE SHOOTER ───────────────────────────────────────────────────────────
-var MouseShooter = (function() {
-  function MouseShooter(radius, mass, factory, camera) {
-    this.pos = new THREE.Vector3();
-    this.center = new THREE.Vector2(0,0);
-    this.raycaster = new THREE.Raycaster();
-    this.quat = new THREE.Quaternion(0,0,0,1);
-    this.ballMat = new THREE.MeshPhongMaterial({
-      color: 0x00d4ff, emissive: 0x004466, shininess: 100
-    });
-    this.radius = radius; this.mass = mass;
-    this.factory = factory; this.camera = camera;
+// ─── DAMAGE FLASH ────────────────────────────────────────────────────────────
+var dmgEl=null;
+function flashDamage(){
+  if(!dmgEl){
+    dmgEl=document.createElement('div');
+    dmgEl.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9000;transition:background .18s ease-out;';
+    document.body.appendChild(dmgEl);
   }
-  MouseShooter.prototype.shoot = function() {
-    this.raycaster.setFromCamera(this.center, this.camera);
-    this.pos.copy(this.raycaster.ray.direction).add(this.raycaster.ray.origin);
-    var ball = this.factory.createSphere(this.radius, this.mass, this.pos, this.quat, this.ballMat);
-    ball.castShadow = true;
-    var body = ball.userData.physicsBody;
-    this.pos.copy(this.raycaster.ray.direction).multiplyScalar(100);
-    body.setLinearVelocity(new Ammo.btVector3(this.pos.x, this.pos.y, this.pos.z));
-    // Flash crosshair
-    var xh = document.getElementById('crosshair');
-    xh.style.filter = 'brightness(3)';
-    setTimeout(function(){ xh.style.filter = ''; }, 80);
+  dmgEl.style.background='rgba(220,0,0,0.38)';
+  setTimeout(function(){dmgEl.style.background='rgba(220,0,0,0)';},220);
+  playerHP=Math.max(0,playerHP-8);
+  document.getElementById('score-num').textContent='HP:'+playerHP+' | '+totalScore;
+  if(playerHP<=0)document.getElementById('score-num').style.color='#ff4444';
+}
+
+// ─── MOUSE SHOOTER ───────────────────────────────────────────────────────────
+var MouseShooter=(function(){
+  function MouseShooter(r,mass,factory,camera){
+    this.pos=new THREE.Vector3();this.center=new THREE.Vector2();
+    this.ray=new THREE.Raycaster();this.quat=new THREE.Quaternion(0,0,0,1);
+    this.bMat=new THREE.MeshPhongMaterial({color:0x00d4ff,emissive:0x004466,shininess:100});
+    this.r=r;this.mass=mass;this.factory=factory;this.camera=camera;
+  }
+  MouseShooter.prototype.shoot=function(){
+    this.ray.setFromCamera(this.center,this.camera);
+    this.pos.copy(this.ray.ray.direction).add(this.ray.ray.origin);
+    var ball=this.factory.createSphere(this.r,this.mass,this.pos,this.quat,this.bMat.clone());
+    ball.castShadow=true;
+    var body=ball.userData.physicsBody;
+    this.pos.copy(this.ray.ray.direction).multiplyScalar(120);
+    body.setLinearVelocity(new Ammo.btVector3(this.pos.x,this.pos.y,this.pos.z));
+    var entry={mesh:ball,hitMap:{}};
+    activeBalls.push(entry);
+    setTimeout(function(){var i=activeBalls.indexOf(entry);if(i>=0)activeBalls.splice(i,1);},8000);
+    var xh=document.getElementById('crosshair');
+    xh.style.filter='brightness(3)';setTimeout(function(){xh.style.filter='';},80);
   };
   return MouseShooter;
 })();
 
-// ─── KILL FEED ────────────────────────────────────────────────────────────────
-function addKill(charId) {
-  var c = CHARS[charId];
-  kills[charId]++;
-  totalScore += 100;
-  document.getElementById('kills-'+charId).textContent = kills[charId];
-  document.getElementById('score-num').textContent = totalScore;
-
-  // Flash avatar
-  var av = document.getElementById('hud-'+charId);
-  av.classList.remove('hit');
-  void av.offsetWidth;
-  av.classList.add('hit');
-  setTimeout(function(){ av.classList.remove('hit'); }, 500);
-
-  // Kill feed entry
-  var feed = document.getElementById('killfeed');
-  var entry = document.createElement('div');
-  entry.className = 'kill-entry';
-  entry.innerHTML = '<img src="'+PORTRAITS[charId]+'" alt="'+c.name+'"><div class="kill-text">HIT <strong>'+c.name+'</strong></div>';
-  feed.appendChild(entry);
-  setTimeout(function(){ if(entry.parentNode) entry.parentNode.removeChild(entry); }, 3100);
+// ─── KILL FEED ───────────────────────────────────────────────────────────────
+function addKill(charId){
+  kills[charId]++;totalScore+=100;
+  document.getElementById('kills-'+charId).textContent=kills[charId];
+  document.getElementById('score-num').textContent='HP:'+playerHP+' | '+totalScore;
+  var av=document.getElementById('hud-'+charId);
+  av.classList.remove('hit');void av.offsetWidth;av.classList.add('hit');
+  setTimeout(function(){av.classList.remove('hit');},500);
+  var feed=document.getElementById('killfeed');
+  var e=document.createElement('div');e.className='kill-entry';
+  e.innerHTML='<img src="'+PORTRAITS[charId]+'" alt="'+CHARS[charId].name+'"><div class="kill-text">ELIMINATED <strong>'+CHARS[charId].name+'</strong></div>';
+  feed.appendChild(e);
+  setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},3200);
 }
 
-// ─── BLOCK FALL DETECTOR ─────────────────────────────────────────────────────
-function checkFallenBlocks(bodies) {
-  for (var i = bodies.length-1; i >= 0; i--) {
-    var obj = bodies[i];
-    if (!obj.userData.knocked && obj.userData.charId && obj.position.y < obj.userData.initY - 3) {
-      obj.userData.knocked = true;
-      addKill(obj.userData.charId);
+// ─── FALLEN BLOCK CHECK ──────────────────────────────────────────────────────
+function checkFallenBlocks(bodies){
+  for(var i=bodies.length-1;i>=0;i--){
+    var obj=bodies[i];
+    if(!obj.userData.knocked&&obj.userData.charId&&obj.position.y<obj.userData.initY-3){
+      obj.userData.knocked=true;totalScore+=10;
+      document.getElementById('score-num').textContent='HP:'+playerHP+' | '+totalScore;
     }
   }
+}
+
+// ─── NPC HIT CHECK ───────────────────────────────────────────────────────────
+function checkNPCHits(){
+  for(var bi=0;bi<activeBalls.length;bi++){
+    var ball=activeBalls[bi];
+    for(var ni=0;ni<npcs.length;ni++){
+      var npc=npcs[ni];
+      if(npc.state==='dead'||ball.hitMap[npc.charId])continue;
+      var dx=ball.mesh.position.x-npc.group.position.x;
+      var dy=ball.mesh.position.y-npc.group.position.y-1.2;
+      var dz=ball.mesh.position.z-npc.group.position.z;
+      if(Math.sqrt(dx*dx+dy*dy+dz*dz)<2.2){
+        ball.hitMap[npc.charId]=true;
+        npc.takeDamage();
+      }
+    }
+  }
+}
+
+// ─── MATERIAL HELPER ─────────────────────────────────────────────────────────
+function wallMats(hex){
+  var c=new THREE.Color(hex);
+  return [
+    new THREE.MeshPhongMaterial({color:c,shininess:60,specular:0x111111}),
+    new THREE.MeshPhongMaterial({color:c.clone().multiplyScalar(.85),shininess:40}),
+    new THREE.MeshPhongMaterial({color:c.clone().multiplyScalar(1.1),shininess:80,specular:0x222222}),
+  ];
 }
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
-window.onload = function() {
-  var elem = document.getElementById('container');
-  elem.innerHTML = '';
+window.onload=function(){
+  var elem=document.getElementById('container');elem.innerHTML='';
+  var engine=new Engine(elem,0x050a12);
 
-  var engine = new Engine(elem, 0x050a12);
-  engine.enableShadows();
-
-  // Camera
-  var camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.2, 1000);
+  var camera=new THREE.PerspectiveCamera(65,window.innerWidth/window.innerHeight,.1,2000);
   engine.setCamera(camera);
 
-  // Lights
-  var dirLight = new THREE.DirectionalLight(0x88ccff, 1.2);
-  dirLight.castShadow = true;
-  dirLight.position.set(50,100,50);
-  var d = 100;
-  dirLight.shadow.camera.left   = -d; dirLight.shadow.camera.right  = d;
-  dirLight.shadow.camera.top    =  d; dirLight.shadow.camera.bottom = -d;
-  dirLight.shadow.camera.near   = 2;  dirLight.shadow.camera.far    = 500;
-  dirLight.shadow.mapSize.x = dirLight.shadow.mapSize.y = 4096;
-  engine.addLight(dirLight);
-  engine.addLight(new THREE.AmbientLight(0x0a1a2a, 2));
-  engine.addLight(new THREE.PointLight(0x00d4ff, 0.4, 60));
+  // Lighting
+  var sun=new THREE.DirectionalLight(0x88bbff,1.5);
+  sun.castShadow=true;sun.position.set(100,180,80);
+  var d=250;sun.shadow.camera.left=-d;sun.shadow.camera.right=d;
+  sun.shadow.camera.top=d;sun.shadow.camera.bottom=-d;
+  sun.shadow.camera.near=2;sun.shadow.camera.far=700;
+  sun.shadow.mapSize.x=sun.shadow.mapSize.y=2048;
+  engine.addLight(sun);
+  engine.addLight(new THREE.AmbientLight(0x0a1824,2.8));
+  engine.addLight(new THREE.PointLight(0x00d4ff,.6,120));
 
-  var factory = new ShapeFactory(engine);
+  var factory=new ShapeFactory(engine);
 
-  // Ground — dark metallic grid
-  var groundMat = new THREE.MeshPhongMaterial({
-    color: 0x060d1a, shininess: 80, specular: 0x002244
+  // Ground 400×400 (static)
+  var gmat=new THREE.MeshPhongMaterial({color:0x050d18,shininess:50,specular:0x001a33});
+  var ground=factory.createBox(400,1,400,0,new THREE.Vector3(0,-.5,0),new THREE.Quaternion(0,0,0,1),gmat,null);
+  ground.receiveShadow=true;
+
+  // Grid overlay
+  var grid=new THREE.GridHelper(400,60,0x00d4ff,0x0a1a30);
+  grid.position.y=.02;engine.addObject(grid);
+
+  // ── 6 BUILDINGS (static walls) ──────────────────────────────────────
+  // NW – Brent (indigo), door faces south (toward center)
+  factory.createBuilding(-85,-85,26,26,5,0,wallMats(0x9fa8da),'brent','south');
+  // NE – Brian (red), door faces south
+  factory.createBuilding( 85,-85,26,26,5,0,wallMats(0xef9a9a),'brian','south');
+  // SW – Glen (teal), door faces north
+  factory.createBuilding(-85, 85,26,26,5,0,wallMats(0x80cbc4),'glen', 'north');
+  // SE – Danny (green), door faces north
+  factory.createBuilding( 85, 85,26,26,5,0,wallMats(0xa5d6a7),'danny','north');
+  // Center-W – T-800 (orange), door faces east
+  factory.createBuilding(-38,  0,22,22,5,0,wallMats(0xff7043),'t800', 'east');
+  // Center-E – Chris (amber), door faces west
+  factory.createBuilding( 38,  0,22,22,5,0,wallMats(0xffcc80),'chris','west');
+
+  // ── Destructible crates for cover ──────────────────────────────────
+  var cQ=new THREE.Quaternion(0,0,0,1);
+  var cPos=[[-12,30],[12,30],[-12,-30],[12,-30],[0,0],
+            [-55,0],[55,0],[0,-55],[0,55],[-30,-50],[30,-50],[-30,50],[30,50],
+            [-60,-45],[60,-45],[-60,45],[60,45]];
+  var cChars=['brent','brian','glen','danny','t800','chris'];
+  cPos.forEach(function(p){
+    var cid=cChars[Math.floor(Math.random()*cChars.length)];
+    var sz=2+Math.random()*2;
+    var cb=factory.createBox(sz,sz,sz,20,new THREE.Vector3(p[0],sz*.5,p[1]),cQ,
+      wallMats(CHARS[cid].color)[0],cid);
+    cb.castShadow=cb.receiveShadow=true;
   });
-  var groundMesh = factory.createParalellepiped(100,1,100, 0,
-    new THREE.Vector3(0,-0.5,0), new THREE.Quaternion(0,0,0,1), groundMat, null);
-  groundMesh.castShadow = true; groundMesh.receiveShadow = true;
-  engine.addObject(groundMesh);
 
-  // Wall material builders per character
-  function wallMats(hexColor) {
-    var base = hexColor;
-    return [
-      new THREE.MeshPhongMaterial({ color:base, shininess:60, specular:0x111111 }),
-      new THREE.MeshPhongMaterial({ color:base, shininess:40, emissive: new THREE.Color(hexColor).multiplyScalar(0.08) }),
-      new THREE.MeshPhongMaterial({ color:base, shininess:80, specular:0x222222 }),
-    ];
-  }
-
-  var brickMass = 20;
-  // 4 walls: T-800, Chris, Brent, Brian  (and Glen/Danny mixed into back walls)
-  factory.createWall_X(brickMass,-9,9,15,-9,  false, wallMats(0xff7043), 't800');   // front
-  factory.createWall_X(brickMass,-9,9,15, 9,  true,  wallMats(0xffcc80), 'chris');  // back
-  factory.createWall_Z(brickMass,-8.25,8.25,15,-9.75, true,  wallMats(0x9fa8da), 'brent'); // left
-  factory.createWall_Z(brickMass,-8.25,8.25,15,11.25, false, wallMats(0xef9a9a), 'brian'); // right
-
-  // Scatter obstacles inside arena
-  var scatterChars = ['glen','danny'];
-  var qId = new THREE.Quaternion(0,0,0,1);
-  for (var si = 0; si < 12; si++) {
-    var sx = (Math.random()-0.5)*14, sz = (Math.random()-0.5)*14;
-    var sc = scatterChars[si % 2];
-    var sm = wallMats(CHARS[sc].color);
-    factory.createParalellepiped(2,2,2, 15,
-      new THREE.Vector3(sx,1,sz), qId, sm[0], sc).castShadow = true;
-  }
-
-  // Stats (FPS counter - subtle)
-  var stats = new Stats();
-  stats.domElement.style.cssText = 'position:absolute;top:0;left:0;opacity:0.4;';
+  // Stats
+  var stats=new Stats();
+  stats.domElement.style.cssText='position:absolute;top:0;left:0;opacity:0.3;';
   elem.appendChild(stats.domElement);
 
-  // Controls
-  var controls = new WASDControls(camera);
-  controls.getObject().position.set(40,25,40);
-  controls.getObject().rotation.y = 0.75;
-  controls.setPitchX(-0.25);
+  // Player controls – start at center, eye height 4
+  var controls=new WASDControls(camera);
+  controls.getObject().position.set(0,4,0);
   engine.addObject(controls.getObject());
 
+  // ── NPC characters ─────────────────────────────────────────────────
+  var npcDefs=[
+    {charId:'brent',x:-85,z:-85},{charId:'brian',x:85,z:-85},
+    {charId:'glen', x:-85,z: 85},{charId:'danny',x:85,z: 85},
+    {charId:'t800', x:-38,z:  0},{charId:'chris',x:38,z:  0},
+  ];
+  npcDefs.forEach(function(d){
+    var group=createHumanoid(CHARS[d.charId].color);
+    engine.addObject(group);
+    var npc=new NPC(group,d.charId,new THREE.Vector3(d.x,0,d.z));
+    npcs.push(npc);
+  });
+
   // Shooter
-  var shooter = new MouseShooter(1.2, 10, factory, camera);
+  var shooter=new MouseShooter(1.2,10,factory,camera);
 
-  // Pause screen click resume
-  document.getElementById('pause-msg').addEventListener('click', function() {
-    if (!controls.enabled) lockPointer(controls);
+  // HUD init
+  document.getElementById('score-num').textContent='HP:'+playerHP+' | 0';
+
+  // Event listeners
+  document.getElementById('pause-msg').addEventListener('click',function(){
+    if(!controls.enabled)lockPointer(controls);
+  });
+  window.addEventListener('mousedown',function(e){
+    if(e.target.nodeName==='A'||e.target.nodeName==='BUTTON')return;
+    if(!controls.enabled)lockPointer(controls);
+    else shooter.shoot();
+  });
+  document.getElementById('play-btn').addEventListener('click',function(e){
+    e.stopPropagation();lockPointer(controls);
   });
 
-  // Mouse handler
-  window.addEventListener('mousedown', function(e) {
-    if (e.target.nodeName === 'A' || e.target.nodeName === 'BUTTON') return;
-    if (!controls.enabled) {
-      lockPointer(controls);
-    } else {
-      shooter.shoot();
-    }
-  });
-
-  // Play button
-  document.getElementById('play-btn').addEventListener('click', function(e) {
-    e.stopPropagation();
-    lockPointer(controls);
-  });
-
-  // Animation
-  function animate() {
+  // Animation loop
+  function animate(){
     requestAnimationFrame(animate);
-    var dt = engine.update(controls.enabled);
+    var dt=engine.update(controls.enabled);
     controls.update(dt);
-    if (controls.enabled) checkFallenBlocks(engine.rigidBodies);
+    if(controls.enabled){
+      var pp=controls.getObject().position;
+      for(var i=0;i<npcs.length;i++)npcs[i].update(dt,pp,true);
+      checkFallenBlocks(engine.rigidBodies);
+      checkNPCHits();
+    }
     stats.update();
   }
   animate();
 };
 </script>
 </body>
-</html>
